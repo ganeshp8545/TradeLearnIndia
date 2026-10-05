@@ -4,17 +4,26 @@ import {consumeAccessCredential, hashAccessToken} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
-export async function POST(request: Request) {
-	const configuredOrigin = process.env.APP_BASE_URL;
-	const requestOrigin = request.headers.get('origin');
-	let validOrigin = false;
+function isAllowedRequestOrigin(requestOrigin: string | null): boolean {
+	if (!requestOrigin) return false;
+
 	try {
-		validOrigin = Boolean(configuredOrigin && requestOrigin
-			&& new URL(requestOrigin).origin === new URL(configuredOrigin).origin);
+		const origin = new URL(requestOrigin).origin;
+		if (process.env.NODE_ENV === 'development') {
+			return origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000';
+		}
+
+		const configuredOrigin = process.env.APP_BASE_URL;
+		return Boolean(configuredOrigin && origin === new URL(configuredOrigin).origin);
 	} catch {
-		validOrigin = false;
+		return false;
 	}
-	if (!validOrigin) return NextResponse.json({error: 'Invalid request origin'}, {status: 403});
+}
+
+export async function POST(request: Request) {
+	if (!isAllowedRequestOrigin(request.headers.get('origin'))) {
+		return NextResponse.json({error: 'Invalid request origin'}, {status: 403});
+	}
 
 	try {
 		const driveUrl = process.env.COURSE_DRIVE_URL;
