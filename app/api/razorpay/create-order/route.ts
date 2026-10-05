@@ -1,4 +1,5 @@
 import {NextResponse} from 'next/server';
+import {randomUUID} from 'node:crypto';
 import {COURSE_SLUG, getCoursePricePaise} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
@@ -14,7 +15,8 @@ export async function POST() {
     const keyId = requiredEnv('RAZORPAY_KEY_ID');
     const keySecret = requiredEnv('RAZORPAY_KEY_SECRET');
     const amount = getCoursePricePaise();
-    const receipt = `course_${COURSE_SLUG}_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+    const timestamp = Date.now().toString(36).slice(-11);
+    const receipt = `course_${timestamp}_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
     const payload = {
       amount,
       currency: 'INR',

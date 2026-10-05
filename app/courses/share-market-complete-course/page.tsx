@@ -6,11 +6,11 @@ import {courseModules} from '@/lib/data';
 
 export const metadata:Metadata={
 	title:{absolute:'Share Market Course Online: Beginner to Advanced Trading Course | CampusEduX'},
-	description:'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹499.',
+	description:'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹1.99.',
 	alternates:{canonical:'https://YOUR-DOMAIN.com/courses/share-market-complete-course'},
 	openGraph:{
 		title:'Share Market Course Online: Beginner to Advanced Trading Course | CampusEduX',
-		description:'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹499.',
+		description:'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹1.99.',
 		url:'https://YOUR-DOMAIN.com/courses/share-market-complete-course',
 		type:'website',
 	},
@@ -40,7 +40,7 @@ const questions=[
 	['How long is the course?','The course contains 13+ hours of video lectures.'],
 	['Can I learn from mobile?','Yes, the course is designed for learning through mobile and laptop.'],
 	['What is the regular price?','The regular course price is ₹1,900.'],
-	['What is the current offer price?','The current offer price is ₹499.'],
+	['What is the current offer price?','The current offer price is ₹1.99.'],
 	['How do I pay?','Payment is completed through the secure Razorpay hosted payment page.'],
 	['Is this investment advice?','No. The course is educational and informational only.'],
 ];
@@ -68,8 +68,8 @@ export default function Course(){
 					<aside className="rounded-2xl border border-white/15 bg-white p-6 shadow-2xl sm:p-8">
 						<p className="text-sm font-bold uppercase tracking-wide text-slate-500">Course offer</p>
 						<p className="mt-5 text-lg text-slate-500 line-through">₹1,900</p>
-						<p className="text-6xl font-black text-green-700">₹499 <span className="text-base font-bold text-slate-500">ONLY</span></p>
-						<div className="mt-6"><EnrollButton label="🛒 ENROLL NOW – ₹499"/></div>
+						<p className="text-6xl font-black text-green-700">₹1.99 <span className="text-base font-bold text-slate-500">ONLY</span></p>
+						<div className="mt-6"><EnrollButton label="🛒 ENROLL NOW – ₹1.99"/></div>
 						<p className="mt-4 text-xs leading-5 text-slate-500">Secure payment is handled on Razorpay’s hosted payment page.</p>
 					</aside>
 				</div>
@@ -135,14 +135,14 @@ export default function Course(){
 						{courseModules.map(module=><article key={module[0]} className="flex gap-4 rounded-xl border border-slate-200 p-4"><span className="tag h-fit">{module[0]}</span><div><h3 className="font-black">{module[1]}</h3><p className="muted mt-1 text-sm leading-6">{module[2]}</p></div></article>)}
 					</div></div>
 					<aside className="dark-section h-fit rounded-2xl p-6 text-white sm:p-8">
-						<span className="pill">🔥 LIMITED-TIME OFFER</span><p className="mt-6 text-sm text-slate-300">Regular Price</p><p className="text-xl font-bold line-through text-slate-400">₹1,900</p><p className="mt-4 text-sm text-slate-300">Offer Price</p><p className="text-5xl font-black text-green-300">₹499</p><p className="mt-3 font-bold text-yellow-300">Save ₹1,401</p><div className="mt-7"><EnrollButton label="🎓 GET COURSE FOR ₹499"/></div>
+						<span className="pill">🔥 LIMITED-TIME OFFER</span><p className="mt-6 text-sm text-slate-300">Regular Price</p><p className="text-xl font-bold line-through text-slate-400">₹1,900</p><p className="mt-4 text-sm text-slate-300">Offer Price</p><p className="text-5xl font-black text-green-300">₹1.99</p><p className="mt-3 font-bold text-yellow-300">Save ₹1,401</p><div className="mt-7"><EnrollButton label="🎓 GET COURSE FOR ₹1.99"/></div>
 					</aside>
 				</div>
 			</section>
 
 			<section className="section">
 				<div className="container rounded-2xl bg-[#0b1d31] px-6 py-10 text-white sm:px-10 md:py-14">
-					<div className="max-w-3xl"><span className="pill">START LEARNING</span><h2 className="mt-5 text-3xl font-black md:text-4xl">Start Your Share Market Learning Journey</h2><p className="mt-5 leading-8 text-slate-300">If you are looking for a structured share market course online that takes you from basic concepts towards advanced trading topics, the CampusEduX Share Market Complete Course can give you a clear learning roadmap.</p><p className="mt-3 leading-8 text-slate-300">Start learning at your own pace and build your understanding of the market, charts, trading concepts and risk management.</p><div className="mt-7"><EnrollButton label="🚀 ENROLL NOW – ₹499"/></div></div>
+					<div className="max-w-3xl"><span className="pill">START LEARNING</span><h2 className="mt-5 text-3xl font-black md:text-4xl">Start Your Share Market Learning Journey</h2><p className="mt-5 leading-8 text-slate-300">If you are looking for a structured share market course online that takes you from basic concepts towards advanced trading topics, the CampusEduX Share Market Complete Course can give you a clear learning roadmap.</p><p className="mt-3 leading-8 text-slate-300">Start learning at your own pace and build your understanding of the market, charts, trading concepts and risk management.</p><div className="mt-7"><EnrollButton label="🚀 ENROLL NOW – ₹1.99"/></div></div>
 				</div>
 			</section>
 
