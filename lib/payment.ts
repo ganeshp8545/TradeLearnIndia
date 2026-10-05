@@ -1,0 +1,1 @@
+export const coursePaymentUrl = 'https://rzp.io/rzp/LXBYLLB2';
