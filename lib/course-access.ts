@@ -1,24 +1,46 @@
+import 'server-only';
 import {createHash, randomBytes} from 'node:crypto';
 
 export const COURSE_NAME = 'Share Market Complete Course';
-export const COURSE_PRICE_PAISE = 49900;
+export const COURSE_SLUG = 'share-market-complete-course';
+export const COURSE_PRICE_INR = 499;
+export const TEST_COURSE_PRICE_INR = 1;
+
+export function getCoursePricePaise(): number {
+	const testMode = process.env.COURSE_TEST_MODE;
+	if (testMode !== 'true' && testMode !== undefined && testMode !== 'false') {
+		throw new Error('COURSE_TEST_MODE must be "true" or "false"');
+	}
+
+	const razorpayKeyId = process.env.RAZORPAY_KEY_ID ?? '';
+	if ((testMode === 'true' && razorpayKeyId.startsWith('rzp_live_'))
+		|| (testMode !== 'true' && razorpayKeyId.startsWith('rzp_test_'))) {
+		throw new Error('COURSE_TEST_MODE does not match the Razorpay key mode');
+	}
+
+	return (testMode === 'true' ? TEST_COURSE_PRICE_INR : COURSE_PRICE_INR) * 100;
+}
 
 export type PaymentStatus = 'pending' | 'success' | 'failed';
 
 export type CoursePayment = {
 	id: string;
-	razorpay_payment_link_id: string;
+	razorpay_payment_link_id: string | null;
 	razorpay_payment_id: string | null;
 	razorpay_order_id: string | null;
 	customer_name: string | null;
 	customer_email: string | null;
 	amount: number;
+	currency: string | null;
 	payment_status: PaymentStatus;
 	course_name: string;
+	course_slug: string | null;
 	course_access_granted: boolean;
 	created_at: string;
+	updated_at?: string | null;
 	access_token_hash?: string | null;
 	access_token_expires_at?: string | null;
+	access_token_used_at?: string | null;
 	access_session_hash?: string | null;
 	access_session_expires_at?: string | null;
 };
@@ -56,33 +78,52 @@ async function supabaseRequest<T>(path: string, init: RequestInit = {}): Promise
 }
 
 export async function recordCoursePayment(payment: {
-	linkId: string;
+	linkId?: string | null;
 	paymentId: string | null;
 	orderId: string | null;
 	name: string | null;
 	email: string | null;
 	amount: number;
+	currency: string;
 	status: PaymentStatus;
+	courseSlug?: string;
 }): Promise<void> {
-	await supabaseRequest('rpc/record_course_payment', {
+	const payload = {
+		razorpay_payment_link_id: payment.linkId ?? null,
+		razorpay_payment_id: payment.paymentId ?? null,
+		razorpay_order_id: payment.orderId ?? null,
+		customer_name: payment.name,
+		customer_email: payment.email?.toLowerCase() ?? null,
+		amount: payment.amount,
+		currency: payment.currency,
+		payment_status: payment.status,
+		course_name: COURSE_NAME,
+		course_slug: payment.courseSlug ?? COURSE_SLUG,
+		course_access_granted: payment.status === 'success',
+		updated_at: new Date().toISOString(),
+	};
+	const query = new URLSearchParams({on_conflict: 'razorpay_order_id'});
+	await supabaseRequest(`course_payments?${query}`, {
 		method: 'POST',
-		body: JSON.stringify({
-			p_payment_link_id: payment.linkId,
-			p_payment_id: payment.paymentId,
-			p_order_id: payment.orderId,
-			p_customer_name: payment.name,
-			p_customer_email: payment.email?.toLowerCase() ?? null,
-			p_amount: payment.amount,
-			p_payment_status: payment.status,
-			p_course_name: COURSE_NAME,
-		}),
+		headers: {Prefer: 'resolution=merge-duplicates'},
+		body: JSON.stringify(payload),
 	});
 }
 
-export async function getPaymentByLinkId(linkId: string): Promise<CoursePayment | null> {
+export async function getPaymentByOrderId(orderId: string): Promise<CoursePayment | null> {
 	const query = new URLSearchParams({
 		select: '*',
-		razorpay_payment_link_id: `eq.${linkId}`,
+		razorpay_order_id: `eq.${orderId}`,
+		limit: '1',
+	});
+	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`);
+	return rows[0] ?? null;
+}
+
+export async function getPaymentByPaymentId(paymentId: string): Promise<CoursePayment | null> {
+	const query = new URLSearchParams({
+		select: '*',
+		razorpay_payment_id: `eq.${paymentId}`,
 		limit: '1',
 	});
 	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`);
@@ -100,9 +141,93 @@ export async function getPaymentByTokenHash(
 		[validityColumn]: `gt.${new Date().toISOString()}`,
 		payment_status: 'eq.success',
 		course_access_granted: 'eq.true',
+		amount: `eq.${getCoursePricePaise()}`,
+		course_name: `eq.${COURSE_NAME}`,
 		limit: '1',
 	});
 	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`);
+	return rows[0] ?? null;
+}
+
+export async function grantCourseAccessToken(orderId: string, paymentId: string): Promise<string | null> {
+	const token = createAccessToken();
+	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+	const now = new Date().toISOString();
+	const query = new URLSearchParams({
+		select: 'id',
+		razorpay_order_id: `eq.${orderId}`,
+		razorpay_payment_id: `eq.${paymentId}`,
+		payment_status: 'eq.success',
+		course_access_granted: 'eq.true',
+		amount: `eq.${getCoursePricePaise()}`,
+		course_name: `eq.${COURSE_NAME}`,
+		access_token_used_at: 'is.null',
+		or: `(access_token_hash.is.null,access_token_expires_at.lt.${now})`,
+		and: `(or(access_session_hash.is.null,access_session_expires_at.lt.${now}))`,
+	});
+	const rows = await supabaseRequest<Array<{id: string}>>(`course_payments?${query}`, {
+		method: 'PATCH',
+		headers: {Prefer: 'return=representation'},
+		body: JSON.stringify({
+			access_token_hash: hashAccessToken(token),
+			access_token_expires_at: expiresAt,
+			access_session_hash: null,
+			access_session_expires_at: null,
+		}),
+	});
+	return rows.length ? token : null;
+}
+
+export async function consumeAccessCredential(
+	column: 'access_token_hash' | 'access_session_hash',
+	validityColumn: 'access_token_expires_at' | 'access_session_expires_at',
+	tokenHash: string,
+): Promise<CoursePayment | null> {
+	const query = new URLSearchParams({
+		select: '*',
+		[column]: `eq.${tokenHash}`,
+		[validityColumn]: `gt.${new Date().toISOString()}`,
+		payment_status: 'eq.success',
+		course_access_granted: 'eq.true',
+		amount: `eq.${getCoursePricePaise()}`,
+		course_name: `eq.${COURSE_NAME}`,
+	});
+	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {
+		method: 'PATCH',
+		headers: {Prefer: 'return=representation'},
+		body: JSON.stringify({
+			[column]: null,
+			[validityColumn]: null,
+			access_token_used_at: new Date().toISOString(),
+		}),
+	});
+	return rows[0] ?? null;
+}
+
+export async function exchangeAccessTokenForSession(
+	tokenHash: string,
+	sessionHash: string,
+): Promise<CoursePayment | null> {
+	const query = new URLSearchParams({
+		select: '*',
+		access_token_hash: `eq.${tokenHash}`,
+		access_token_expires_at: `gt.${new Date().toISOString()}`,
+		payment_status: 'eq.success',
+		course_access_granted: 'eq.true',
+		amount: `eq.${getCoursePricePaise()}`,
+		course_name: `eq.${COURSE_NAME}`,
+	});
+	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {
+		method: 'PATCH',
+		headers: {Prefer: 'return=representation'},
+		body: JSON.stringify({
+			access_token_hash: null,
+			access_token_expires_at: null,
+			access_token_used_at: new Date().toISOString(),
+			access_session_hash: sessionHash,
+			access_session_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+		}),
+	});
 	return rows[0] ?? null;
 }
 
@@ -119,7 +244,13 @@ export async function sendCourseAccessEmail(payment: CoursePayment): Promise<voi
 	await supabaseRequest(`course_payments?${query}`, {
 		method: 'PATCH',
 		headers: {Prefer: 'return=minimal'},
-		body: JSON.stringify({access_token_hash: tokenHash, access_token_expires_at: expiresAt}),
+		body: JSON.stringify({
+			access_token_hash: tokenHash,
+			access_token_expires_at: expiresAt,
+			access_token_used_at: null,
+			access_session_hash: null,
+			access_session_expires_at: null,
+		}),
 	});
 
 	const appUrl = requiredEnv('APP_BASE_URL').replace(/\/$/, '');
@@ -139,18 +270,4 @@ export async function sendCourseAccessEmail(payment: CoursePayment): Promise<voi
 		}),
 	});
 	if (!emailResponse.ok) throw new Error(`Course access email delivery failed (${emailResponse.status})`);
-}
-
-export async function saveAccessSession(payment: CoursePayment, sessionHash: string): Promise<void> {
-	const query = new URLSearchParams({id: `eq.${payment.id}`});
-	await supabaseRequest(`course_payments?${query}`, {
-		method: 'PATCH',
-		headers: {Prefer: 'return=minimal'},
-		body: JSON.stringify({
-			access_token_hash: null,
-			access_token_expires_at: null,
-			access_session_hash: sessionHash,
-			access_session_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-		}),
-	});
 }

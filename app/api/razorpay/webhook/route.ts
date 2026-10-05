@@ -1,28 +1,26 @@
 import {NextResponse} from 'next/server';
-import {COURSE_PRICE_PAISE, recordCoursePayment, type PaymentStatus} from '@/lib/course-access';
+import {COURSE_SLUG, getCoursePricePaise, recordCoursePayment, type PaymentStatus} from '@/lib/course-access';
 import {verifyRazorpayWebhookSignature} from '@/lib/razorpay-webhook';
 
 export const runtime = 'nodejs';
 
 type RazorpayEntity = {
 	id?: string;
+	status?: string;
 	amount?: number;
-	amount_paid?: number;
 	currency?: string;
-	email?: string;
-	contact?: string;
-	name?: string;
+	email?: string | null;
+	contact?: string | null;
+	name?: string | null;
 	order_id?: string | null;
-	payment_link_id?: string | null;
-	customer?: {name?: string; email?: string};
-	payments?: Array<{payment_id?: string}>;
+	notes?: {course?: string};
 };
 
 type RazorpayWebhook = {
 	event?: string;
 	payload?: {
-		payment_link?: {entity?: RazorpayEntity};
 		payment?: {entity?: RazorpayEntity};
+		order?: {entity?: {id?: string; notes?: {course?: string}}};
 	};
 };
 
@@ -41,33 +39,36 @@ export async function POST(request: Request) {
 		}
 
 		const event = JSON.parse(rawBody) as RazorpayWebhook;
-		if (!['payment_link.paid', 'payment.failed', 'payment_link.created'].includes(event.event ?? '')) {
+		if (!['payment.captured', 'payment.failed'].includes(event.event ?? '')) {
 			return NextResponse.json({received: true});
 		}
 
-		const link = event.payload?.payment_link?.entity;
 		const payment = event.payload?.payment?.entity;
-		const linkId = link?.id ?? payment?.payment_link_id;
-		if (!linkId) return NextResponse.json({error: 'Missing Payment Link ID'}, {status: 400});
+		if (!payment?.order_id || !payment.id) {
+			return NextResponse.json({error: 'Missing payment/order information'}, {status: 400});
+		}
 
-		const status: PaymentStatus = event.event === 'payment_link.paid'
-			? 'success'
-			: event.event === 'payment.failed' ? 'failed' : 'pending';
-		const amount = status === 'success' ? (link?.amount_paid ?? payment?.amount ?? 0) : (link?.amount ?? payment?.amount ?? 0);
-		const currency = link?.currency ?? payment?.currency;
-		if (status === 'success' && (amount !== COURSE_PRICE_PAISE || currency !== 'INR')) {
+		const courseSlug = payment.notes?.course ?? event.payload?.order?.entity?.notes?.course ?? COURSE_SLUG;
+		if (courseSlug !== COURSE_SLUG) {
+			return NextResponse.json({received: true});
+		}
+
+		const status: PaymentStatus = event.event === 'payment.captured' ? 'success' : 'failed';
+		const amount = payment.amount ?? 0;
+		const currency = payment.currency ?? 'INR';
+		if (status === 'success' && (amount !== getCoursePricePaise() || currency !== 'INR')) {
 			return NextResponse.json({error: 'Payment does not match the course price'}, {status: 422});
 		}
 
-		const payId = payment?.id ?? link?.payments?.[0]?.payment_id ?? null;
 		await recordCoursePayment({
-			linkId,
-			paymentId: payId,
-			orderId: payment?.order_id ?? null,
-			name: payment?.name ?? link?.customer?.name ?? null,
-			email: payment?.email ?? link?.customer?.email ?? null,
+			paymentId: payment.id,
+			orderId: payment.order_id,
+			name: payment.contact ?? payment.name ?? null,
+			email: payment.email ?? null,
 			amount,
+			currency,
 			status,
+			courseSlug: courseSlug,
 		});
 		return NextResponse.json({received: true});
 	} catch (error) {

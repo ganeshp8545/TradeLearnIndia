@@ -1,8 +1,8 @@
 import type {Metadata} from 'next';
 import {ArrowDown, BarChart3, BookOpen, ChartNoAxesCombined, Clock3, Laptop, ShieldCheck, Sparkles} from 'lucide-react';
 import {Footer, Header} from '@/components/Site';
+import {RazorpayCheckoutButton} from '@/components/RazorpayCheckoutButton';
 import {courseModules} from '@/lib/data';
-import {coursePaymentUrl} from '@/lib/payment';
 
 export const metadata:Metadata={
 	title:{absolute:'Share Market Course Online: Beginner to Advanced Trading Course | CampusEduX'},
@@ -46,7 +46,7 @@ const questions=[
 ];
 
 function EnrollButton({label}:{label:string}){
-	return <a className="btn btn-primary w-full sm:w-auto" href={coursePaymentUrl} target="_blank" rel="noopener noreferrer">{label}</a>;
+	return <RazorpayCheckoutButton label={label} className="btn btn-primary w-full sm:w-auto"/>;
 }
 
 export default function Course(){

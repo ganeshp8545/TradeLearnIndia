@@ -1,0 +1,45 @@
+import {cookies} from 'next/headers';
+import {NextResponse} from 'next/server';
+import {consumeAccessCredential, hashAccessToken} from '@/lib/course-access';
+
+export const runtime = 'nodejs';
+
+export async function POST(request: Request) {
+	const configuredOrigin = process.env.APP_BASE_URL;
+	const requestOrigin = request.headers.get('origin');
+	let validOrigin = false;
+	try {
+		validOrigin = Boolean(configuredOrigin && requestOrigin
+			&& new URL(requestOrigin).origin === new URL(configuredOrigin).origin);
+	} catch {
+		validOrigin = false;
+	}
+	if (!validOrigin) return NextResponse.json({error: 'Invalid request origin'}, {status: 403});
+
+	try {
+		const driveUrl = process.env.COURSE_DRIVE_URL;
+		if (!driveUrl) throw new Error('Missing required environment variable: COURSE_DRIVE_URL');
+		const destination = new URL(driveUrl);
+		if (destination.protocol !== 'https:' || destination.hostname !== 'drive.google.com') {
+			throw new Error('COURSE_DRIVE_URL must be an HTTPS Google Drive URL');
+		}
+
+		const cookieStore = cookies();
+		const token = cookieStore.get('course_access_token')?.value;
+		const session = cookieStore.get('course_access_session')?.value;
+		const used = token
+			? await consumeAccessCredential('access_token_hash', 'access_token_expires_at', hashAccessToken(token))
+			: session
+				? await consumeAccessCredential('access_session_hash', 'access_session_expires_at', hashAccessToken(session))
+				: null;
+		if (!used) return NextResponse.redirect(new URL('/course-access?state=invalid', request.url), 303);
+
+		const response = NextResponse.redirect(destination, 303);
+		response.cookies.set('course_access_token', '', {httpOnly: true, path: '/', maxAge: 0});
+		response.cookies.set('course_access_session', '', {httpOnly: true, path: '/', maxAge: 0});
+		return response;
+	} catch (error) {
+		console.error('Course access redirect failed', error);
+		return NextResponse.redirect(new URL('/course-access?state=error', request.url), 303);
+	}
+}
