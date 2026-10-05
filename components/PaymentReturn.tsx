@@ -15,34 +15,57 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 	const [status, setStatus] = useState<ViewStatus>('loading');
 
 	useEffect(() => {
-		if (!callback.razorpay_order_id || !callback.razorpay_payment_id || !callback.razorpay_signature) {
+		let paymentCallback = callback;
+		if (!paymentCallback.razorpay_order_id || !paymentCallback.razorpay_payment_id || !paymentCallback.razorpay_signature) {
+			try {
+				const savedCallback = sessionStorage.getItem('razorpay_payment_callback');
+				if (savedCallback) paymentCallback = JSON.parse(savedCallback) as Callback;
+			} catch {
+				paymentCallback = callback;
+			}
+		}
+		if (!paymentCallback.razorpay_order_id || !paymentCallback.razorpay_payment_id || !paymentCallback.razorpay_signature) {
 			setStatus('not_found');
 			return;
 		}
 		let active = true;
 		let attempts = 0;
+		let retryTimer: number | undefined;
+		const retry = () => {
+			if (attempts++ >= 20) {
+				setStatus('server_error');
+				return;
+			}
+			setStatus('pending');
+			retryTimer = window.setTimeout(() => {void check();}, 2500);
+		};
 		const check = async () => {
 			try {
 				const response = await fetch('/api/razorpay/verify', {
 					method: 'POST',
 					headers: {'Content-Type': 'application/json'},
-					body: JSON.stringify(callback),
+					body: JSON.stringify(paymentCallback),
 					cache: 'no-store',
 				});
 				const result = await response.json() as {status?: ViewStatus; error?: string};
 				if (!active) return;
-				setStatus(result.status ?? (response.ok ? 'success' : 'failed'));
-				if (result.status === 'success') {
+				const responseStatus = result.status ?? (response.ok ? 'success' : 'failed');
+				setStatus(responseStatus);
+				if (responseStatus === 'success') {
+					sessionStorage.removeItem('razorpay_payment_callback');
 					window.location.replace('/course-access');
-				} else if (result.status === 'pending' && attempts++ < 20) {
-					window.setTimeout(check, 2500);
+				} else if (responseStatus === 'pending') {
+					retry();
 				}
 			} catch {
-				if (active) setStatus('server_error');
+				if (active) retry();
 			}
 		};
 		void check();
-		return () => {active = false;};
+		return () => {
+			active = false;
+			if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+		};
 	}, [callback]);
 
 	const title = status === 'success' ? 'Payment Successful'

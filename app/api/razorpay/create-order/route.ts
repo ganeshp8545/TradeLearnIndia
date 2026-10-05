@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
 import {randomUUID} from 'node:crypto';
-import {COURSE_SLUG, getCoursePricePaise} from '@/lib/course-access';
+import {COURSE_SLUG, getCoursePricePaise, recordCoursePayment} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
@@ -39,6 +39,17 @@ export async function POST() {
     if (!response.ok || !data.id || data.amount !== amount || data.currency !== 'INR') {
       throw new Error(data.error?.description ?? 'Razorpay order creation failed');
     }
+
+    await recordCoursePayment({
+      orderId: data.id,
+      paymentId: null,
+      name: null,
+      email: null,
+      amount,
+      currency: 'INR',
+      status: 'pending',
+      courseSlug: COURSE_SLUG,
+    });
 
     return NextResponse.json({
       orderId: data.id,

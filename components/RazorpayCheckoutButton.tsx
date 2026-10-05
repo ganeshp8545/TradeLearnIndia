@@ -71,23 +71,9 @@ export function RazorpayCheckoutButton({label, className = 'btn btn-primary w-fu
         description: 'Share Market Complete Course',
         order_id: data.orderId,
         theme: {color: '#22c55e'},
-        handler: async (paymentResponse) => {
-          const verifyResponse = await fetch('/api/razorpay/verify', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              razorpay_payment_id: paymentResponse.razorpay_payment_id,
-              razorpay_order_id: paymentResponse.razorpay_order_id,
-              razorpay_signature: paymentResponse.razorpay_signature,
-            }),
-          });
-          const verifyData = await verifyResponse.json() as {error?: string; status?: string};
-          if (!verifyResponse.ok || verifyData.status !== 'success') {
-            setError(verifyData.error ?? 'Payment verification failed.');
-            setIsLoading(false);
-            return;
-          }
-          window.location.href = '/course-access';
+        handler: (paymentResponse) => {
+          sessionStorage.setItem('razorpay_payment_callback', JSON.stringify(paymentResponse));
+          window.location.assign('/payment/return');
         },
         modal: {
           ondismiss: () => {

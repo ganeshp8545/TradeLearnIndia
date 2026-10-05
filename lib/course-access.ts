@@ -1,5 +1,5 @@
 import 'server-only';
-import {createHash, randomBytes} from 'node:crypto';
+import {createHash, createHmac, randomBytes} from 'node:crypto';
 
 export const COURSE_NAME = 'Share Market Complete Course';
 export const COURSE_SLUG = 'share-market-complete-course';
@@ -102,11 +102,20 @@ export async function recordCoursePayment(payment: {
 		course_access_granted: payment.status === 'success',
 		updated_at: new Date().toISOString(),
 	};
-	const query = new URLSearchParams({on_conflict: 'razorpay_order_id'});
-	await supabaseRequest(`course_payments?${query}`, {
+	await supabaseRequest('rpc/record_course_payment', {
 		method: 'POST',
-		headers: {Prefer: 'resolution=merge-duplicates'},
-		body: JSON.stringify(payload),
+		body: JSON.stringify({
+			p_payment_link_id: payload.razorpay_payment_link_id,
+			p_payment_id: payload.razorpay_payment_id,
+			p_order_id: payload.razorpay_order_id,
+			p_customer_name: payload.customer_name,
+			p_customer_email: payload.customer_email,
+			p_amount: payload.amount,
+			p_payment_status: payload.payment_status,
+			p_course_name: payload.course_name,
+			p_currency: payload.currency,
+			p_course_slug: payload.course_slug,
+		}),
 	});
 }
 
@@ -150,9 +159,10 @@ export async function getPaymentByTokenHash(
 }
 
 export async function grantCourseAccessToken(orderId: string, paymentId: string): Promise<string | null> {
-	const token = createAccessToken();
+	const token = createHmac('sha256', requiredEnv('SUPABASE_SERVICE_ROLE_KEY'))
+		.update(`course-access:${orderId}:${paymentId}`)
+		.digest('base64url');
 	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-	const now = new Date().toISOString();
 	const query = new URLSearchParams({
 		select: 'id',
 		razorpay_order_id: `eq.${orderId}`,
@@ -161,9 +171,7 @@ export async function grantCourseAccessToken(orderId: string, paymentId: string)
 		course_access_granted: 'eq.true',
 		amount: `eq.${getCoursePricePaise()}`,
 		course_name: `eq.${COURSE_NAME}`,
-		access_token_used_at: 'is.null',
-		or: `(access_token_hash.is.null,access_token_expires_at.lt.${now})`,
-		and: `(or(access_session_hash.is.null,access_session_expires_at.lt.${now}))`,
+		and: `(or(access_session_hash.is.null,access_session_expires_at.lt.${new Date().toISOString()}))`,
 	});
 	const rows = await supabaseRequest<Array<{id: string}>>(`course_payments?${query}`, {
 		method: 'PATCH',
@@ -171,6 +179,7 @@ export async function grantCourseAccessToken(orderId: string, paymentId: string)
 		body: JSON.stringify({
 			access_token_hash: hashAccessToken(token),
 			access_token_expires_at: expiresAt,
+			access_token_used_at: null,
 			access_session_hash: null,
 			access_session_expires_at: null,
 		}),

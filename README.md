@@ -28,7 +28,7 @@ npm start
 Create a local `.env.local` from `.env.example` and set each value server-side only.
 
 Required variables:
-- `APP_BASE_URL`: canonical HTTPS origin, e.g. `https://trade-learn-india.vercel.app`
+- `APP_BASE_URL`: canonical HTTPS origin, `https://market.campusedux.com` in production
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RAZORPAY_KEY_ID`: Razorpay test key in test mode
