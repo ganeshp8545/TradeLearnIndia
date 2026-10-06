@@ -3,7 +3,7 @@ import {createHash, createHmac, randomBytes} from 'node:crypto';
 
 export const COURSE_NAME = 'Share Market Complete Course';
 export const COURSE_SLUG = 'share-market-complete-course';
-export const COURSE_PRICE_INR = 1.99;
+export const COURSE_PRICE_INR = 499;
 export const TEST_COURSE_PRICE_INR = 1;
 
 export function getCoursePricePaise(): number {

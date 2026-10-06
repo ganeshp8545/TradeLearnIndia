@@ -1,2 +1,2 @@
-import {Page,CTA} from '@/components/Site';
+import {Page} from '@/components/Site';
 export default function PageView(){return <Page title="ETF Basics" subtitle="Understand exchange-traded funds, tracking, liquidity and costs."><section className="section"><div className="container max-w-5xl"><article className="card prose"><h2>Exchange Traded Funds</h2><p>ETFs are investment funds whose units can trade on an exchange. They may track an index, commodity or other permitted exposure.</p><h3>What to compare</h3><p>Look at the objective, tracking difference, costs, liquidity and spread. ETF prices can move during market hours.</p></article></div></section></Page>}

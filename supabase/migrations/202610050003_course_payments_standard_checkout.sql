@@ -22,7 +22,7 @@ where course_slug is null and course_name = 'Share Market Complete Course';
 
 update public.course_payments
 set currency = 'INR'
-where currency is null and amount = 1.9900;
+where currency is null and amount = 49900;
 
 alter table public.course_payments
     alter column razorpay_payment_link_id drop not null;

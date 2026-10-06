@@ -74,7 +74,7 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				: status === 'server_error' ? 'Verification temporarily unavailable'
 					: status === 'loading' ? 'Processing Payment...'
 						: 'Payment verification pending';
-	const description = status === 'success' ? '₹1.99 Payment Verified. Your Share Market Complete Course is ready.'
+	const description = status === 'success' ? '₹499 Payment Verified. Your Share Market Complete Course is ready.'
 		: status === 'failed' ? 'Payment was not completed.'
 			: status === 'not_found' ? 'We could not verify a valid Razorpay checkout response for this payment.'
 				: status === 'server_error' ? 'We could not check payment status right now. Please refresh this page shortly.'

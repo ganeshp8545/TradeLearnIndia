@@ -1,6 +1,6 @@
 # CampusEduX — Share Market Education
 
-Next.js 14 + TypeScript + Tailwind site with server-side Razorpay Standard Checkout and protected course access.
+Next.js 16 + TypeScript + Tailwind site with server-side Razorpay Standard Checkout and protected course access.
 
 ## Features
 - Responsive finance-style UI

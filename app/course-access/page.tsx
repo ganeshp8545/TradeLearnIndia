@@ -5,11 +5,12 @@ import {COURSE_NAME, getPaymentByTokenHash, hashAccessToken} from '@/lib/course-
 export const dynamic = 'force-dynamic';
 export const metadata = {title: 'Course access | CampusEduX', robots: {index: false, follow: false}};
 
-export default async function CourseAccess({searchParams}: {searchParams: {state?: string}}) {
-	const accessToken = cookies().get('course_access_token')?.value;
-	const sessionToken = cookies().get('course_access_session')?.value;
+export default async function CourseAccess({searchParams}: {searchParams: Promise<{state?: string}>}) {
+	const [cookieStore, resolvedSearchParams] = await Promise.all([cookies(), searchParams]);
+	const accessToken = cookieStore.get('course_access_token')?.value;
+	const sessionToken = cookieStore.get('course_access_session')?.value;
 	let hasAccess = false;
-	let serverError = searchParams.state === 'error';
+	let serverError = resolvedSearchParams.state === 'error';
 	if (accessToken || sessionToken) {
 		try {
 			hasAccess = Boolean(accessToken

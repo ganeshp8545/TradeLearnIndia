@@ -1,2 +1,2 @@
-import {Page,CTA} from '@/components/Site';
+import {Page} from '@/components/Site';
 export default function PageView(){return <Page title="Intraday Trading Basics" subtitle="Understand the basics of trading within a market session and why risk controls matter."><section className="section"><div className="container max-w-5xl"><article className="card prose"><h2>What is intraday trading?</h2><p>Intraday trading generally means opening and closing a position within the same trading day. It can involve fast price movement, execution risk and costs.</p><h3>Study before trading</h3><p>Learn order types, position sizing, stop-loss planning, market sessions and trading psychology. Never trade with money you cannot afford to lose.</p></article></div></section></Page>}

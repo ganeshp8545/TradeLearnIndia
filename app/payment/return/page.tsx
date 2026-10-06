@@ -12,10 +12,11 @@ function first(value: string | string[] | undefined): string {
 	return Array.isArray(value) ? value[0] ?? '' : value ?? '';
 }
 
-export default function PaymentReturnPage({searchParams}: {searchParams: CallbackParams}) {
+export default async function PaymentReturnPage({searchParams}: {searchParams: Promise<CallbackParams>}) {
+	const resolvedSearchParams = await searchParams;
 	return <PaymentReturn callback={{
-		razorpay_payment_id: first(searchParams.razorpay_payment_id),
-		razorpay_order_id: first(searchParams.razorpay_order_id),
-		razorpay_signature: first(searchParams.razorpay_signature),
+		razorpay_payment_id: first(resolvedSearchParams.razorpay_payment_id),
+		razorpay_order_id: first(resolvedSearchParams.razorpay_order_id),
+		razorpay_signature: first(resolvedSearchParams.razorpay_signature),
 	}}/>;
 }

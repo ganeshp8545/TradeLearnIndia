@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 			throw new Error('COURSE_DRIVE_URL must be an HTTPS Google Drive URL');
 		}
 
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = cookieStore.get('course_access_token')?.value;
 		const session = cookieStore.get('course_access_session')?.value;
 		const used = token
