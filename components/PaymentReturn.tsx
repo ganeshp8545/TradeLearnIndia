@@ -53,7 +53,6 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				setStatus(responseStatus);
 				if (responseStatus === 'success') {
 					sessionStorage.removeItem('razorpay_payment_callback');
-					window.location.replace('/course-access');
 				} else if (responseStatus === 'pending') {
 					retry();
 				}
@@ -74,17 +73,17 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				: status === 'server_error' ? 'Verification temporarily unavailable'
 					: status === 'loading' ? 'Processing Payment...'
 						: 'Payment verification pending';
-	const description = status === 'success' ? '₹499 Payment Verified. Your Share Market Complete Course is ready.'
+	const description = status === 'success' ? 'Your Share Market Complete Course purchase has been confirmed.'
 		: status === 'failed' ? 'Payment was not completed.'
 			: status === 'not_found' ? 'We could not verify a valid Razorpay checkout response for this payment.'
 				: status === 'server_error' ? 'We could not check payment status right now. Please refresh this page shortly.'
 					: status === 'loading' ? 'Please wait while we securely verify your payment with Razorpay.'
 						: 'Payment verification is still processing. This page will check for updates automatically.';
 
-	return <main className="min-h-screen bg-slate-50 px-5 py-12 text-slate-900 sm:py-16">
+	return <main className="min-h-[calc(100dvh-64px)] bg-slate-50 px-4 py-10 text-slate-900 sm:py-12">
 		<div className="mx-auto max-w-xl">
 			<a href="/courses/share-market-complete-course" className="text-sm font-bold text-green-800">TradeLearnIndia</a>
-			<section aria-live="polite" className="mt-8 rounded-xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
+			<section aria-live="polite" className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 				{status === 'loading' || status === 'pending'
 					? <LoaderCircle className="mb-5 animate-spin text-green-700" aria-label="Checking payment" size={30}/>
 					: status === 'success'
@@ -92,8 +91,12 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 						: <CircleAlert className="mb-5 text-amber-600" size={30}/>}
 				<h1 className="text-3xl font-black">{title}</h1>
 				<p className="muted mt-3 leading-7">{description}</p>
-				{status === 'success' && <p className="mt-4 font-bold">Share Market Complete Course</p>}
-				<a href="/courses/share-market-complete-course" className="mt-8 inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft size={16}/> Return to course page</a>
+				{status === 'success' && <>
+					<p className="mt-4 font-bold">Share Market Complete Course</p>
+					<p className="muted mt-3 text-sm leading-6">Your payment has been successfully verified. Your course access is ready.</p>
+					<a href="/course-access" className="btn btn-primary mt-6 w-full sm:w-auto">ACCESS COURSE</a>
+				</>}
+				<a href="/courses/share-market-complete-course" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft size={16}/> Return to course page</a>
 			</section>
 		</div>
 	</main>;

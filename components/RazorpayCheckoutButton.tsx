@@ -54,7 +54,7 @@ export function RazorpayCheckoutButton({label, className = 'btn btn-primary w-fu
       const response = await fetch('/api/razorpay/create-order', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({courseSlug: 'share-market-complete-course'}),
+        body: JSON.stringify({}),
       });
       const data = await response.json() as {error?: string; orderId?: string; amount?: number; currency?: string; keyId?: string};
       if (!response.ok || !data.orderId || !data.keyId || typeof data.amount !== 'number' || !Number.isInteger(data.amount) || data.currency !== 'INR') {

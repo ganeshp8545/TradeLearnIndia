@@ -24,6 +24,10 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // TypeScript 5.9 provides its compiler API; avoid Next's CLI output-capture path.
+    useTypeScriptCli: false,
+  },
   async headers() {
     return [{source: '/:path*', headers: securityHeaders}];
   },

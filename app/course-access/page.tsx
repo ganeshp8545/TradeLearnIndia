@@ -22,22 +22,22 @@ export default async function CourseAccess({searchParams}: {searchParams: Promis
 		}
 	}
 
-	return <main className="min-h-screen bg-slate-50 px-5 py-16 text-slate-900">
+	return <main className="min-h-[calc(100dvh-64px)] bg-slate-50 px-4 py-10 text-slate-900 sm:py-12">
 		<div className="mx-auto max-w-2xl">
 			<a href="/courses/share-market-complete-course" className="text-sm font-bold text-green-800">CampusEduX</a>
-			<section className="mt-8 rounded-xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
+			<section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 				{hasAccess ? <>
 					<p className="flex items-center gap-2 font-bold text-green-800"><Check size={20}/>Payment Successful</p>
 					<h1 className="mt-3 text-3xl font-black">Thank you for purchasing<br/>Share Market Complete Course</h1>
 					<p className="mt-3 font-bold text-green-800">₹499 Payment Verified</p>
 					<p className="muted mt-3">Your course is ready. Your course access has been securely verified.</p>
-					<div className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+					<div className="mt-6 divide-y divide-slate-200 border-y border-slate-200">
 						<p className="flex items-center gap-3 py-4"><BookOpen size={19} className="text-green-700"/><span>{COURSE_NAME}</span></p>
 						<p className="flex items-center gap-3 py-4"><Clock3 size={19} className="text-green-700"/><span><strong>Duration:</strong> 13+ Hours</span></p>
 						<p className="flex items-center gap-3 py-4"><GraduationCap size={19} className="text-green-700"/><span><strong>Access:</strong> Beginner → Advanced</span></p>
 						<p className="py-4 font-semibold text-slate-700">Lifetime Course Access</p>
 					</div>
-					<form action="/api/course-access/open" method="post" className="mt-8">
+					<form action="/api/course-access/open" method="post" className="mt-6">
 						<button className="btn btn-primary w-full sm:w-auto" type="submit">ACCESS YOUR COURSE</button>
 					</form>
 				</> : <>
