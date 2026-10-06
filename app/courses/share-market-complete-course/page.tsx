@@ -1,161 +1,45 @@
 import type {Metadata} from 'next';
-import {ArrowDown, BarChart3, BookOpen, ChartNoAxesCombined, Clock3, Laptop, ShieldCheck, Sparkles} from 'lucide-react';
+import {BarChart3, BookOpen, Brain, CandlestickChart, ChartNoAxesCombined, Check, Clock3, Laptop, LineChart, LockKeyhole, ShieldCheck, Target, TrendingUp} from 'lucide-react';
 import {Footer, Header} from '@/components/Site';
 import {RazorpayCheckoutButton} from '@/components/RazorpayCheckoutButton';
 import {courseModules} from '@/lib/data';
 
-export const metadata:Metadata={
-	title:{absolute:'Share Market Course Online: Beginner to Advanced Trading Course | TradeLearnIndia'},
-	description:'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹499.',
-	alternates:{canonical:'https://market.campusedux.com/courses/share-market-complete-course'},
-	openGraph:{
-		title:'Share Market Course Online: Beginner to Advanced Trading Course | TradeLearnIndia',
-		description:'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹499.',
-		url:'https://market.campusedux.com/courses/share-market-complete-course',
-		type:'website',
-	},
+export const metadata: Metadata = {
+	title: {absolute: 'Share Market Course Online: Beginner to Advanced Trading Course | TradeLearnIndia'},
+	description: 'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹499.',
+	alternates: {canonical: 'https://market.campusedux.com/courses/share-market-complete-course'},
+	openGraph: {title: 'Share Market Course Online: Beginner to Advanced Trading Course | TradeLearnIndia', description: 'Learn share market trading from beginner to advanced with 13+ hours of video lessons covering price action, technical analysis, support & resistance, swing trading and risk management. Enroll for ₹499.', url: 'https://market.campusedux.com/courses/share-market-complete-course', type: 'website'},
 };
 
-const learningTopics=[
-	'Share Market Basics','Technical Analysis','Price Action Trading','Support and Resistance',
-	'Trading Strategies','Bank Nifty Strategies','Swing Trading Concepts','Intraday Trading Concepts',
-	'Risk and Money Management','Trading Psychology','Practical Chart Analysis',
+const topics = [
+	['Share Market Basics', 'Understand market structure, key participants and the essentials before moving to charts.', BookOpen], ['Technical Analysis', 'Study charts, trends, candles and the tools used to organise market observations.', BarChart3], ['Price Action', 'Learn to interpret price behaviour, zones, breakouts and confirmations in context.', CandlestickChart], ['Support & Resistance', 'Identify important chart levels and learn how traders study these areas.', Target], ['Trading Strategies', 'Explore how trading ideas are structured with practical chart-based examples.', TrendingUp], ['Bank Nifty Strategies', 'Study Bank Nifty concepts, levels and strategy examples as part of the curriculum.', LineChart], ['Swing Trading', 'Understand trend-based trade planning, entries, exits and holding-period concepts.', ChartNoAxesCombined], ['Intraday Concepts', 'Learn about session structure, setups, discipline and risk controls for intraday study.', Clock3], ['Risk & Money Management', 'Understand position sizing, stop loss, risk-reward and capital discipline.', ShieldCheck], ['Trading Psychology', 'Study patience, discipline and the role of emotions in market decisions.', Brain], ['Practical Chart Analysis', 'Bring the concepts together through practical, chart-based learning examples.', CandlestickChart],
+] as const;
+const roadmap = ['Market Fundamentals', 'Understanding Charts', 'Technical Analysis', 'Price Action', 'Support & Resistance', 'Trading Strategies', 'Swing & Intraday Concepts', 'Risk Management', 'Trading Psychology', 'Practical Chart Analysis'];
+const highlights = [['13+ Hours Video Lectures', Clock3], ['Structured Learning', BookOpen], ['Technical Analysis', BarChart3], ['Price Action', CandlestickChart], ['Trading Strategy Concepts', Target], ['Risk & Money Management', ShieldCheck], ['Trading Psychology', Brain], ['Mobile & Laptop Learning', Laptop]] as const;
+const questions = [
+	['Is this course suitable for beginners?', 'Yes. The course follows a structured path from market fundamentals to more advanced chart-based concepts.'], ['Does the course cover technical analysis?', 'Yes. Technical analysis, charts, trends, candles and market structure are included in the course curriculum.'], ['What topics are included?', 'Topics include share market basics, price action, support and resistance, trading strategies, Bank Nifty concepts, swing trading, intraday concepts, risk management, trading psychology and practical chart analysis.'], ['How long is the course?', 'The course includes 13+ hours of video learning.'], ['Can I learn at my own pace?', 'The video learning format lets you progress through the material at a pace that suits your study schedule.'], ['Does the course include practical chart analysis?', 'Yes. Practical chart analysis is included as a dedicated part of the course.'], ['Is this investment advice?', 'No. This course is educational and does not constitute personalised investment, financial or trading advice.'],
 ];
 
-const courseBenefits=[
-	{icon:Clock3,title:'13+ Hours of Video Lectures'},
-	{icon:BookOpen,title:'Beginner to Advanced Structure'},
-	{icon:BarChart3,title:'Technical Analysis'},
-	{icon:ChartNoAxesCombined,title:'Price Action'},
-	{icon:Sparkles,title:'Swing Trading Concepts'},
-	{icon:ShieldCheck,title:'Risk Management'},
-	{icon:Laptop,title:'Mobile & Laptop Access'},
-	{icon:ArrowDown,title:'Lifetime Access'},
-];
-
-const roadmap=['Share Market Basics','Technical Analysis','Price Action','Support & Resistance','Trading Strategies','Swing Trading','Risk Management','Advanced Concepts'];
-
-const questions=[
-	['Is this course suitable for beginners?','Yes. The course follows a beginner-to-advanced learning structure.'],
-	['How long is the course?','The course contains 13+ hours of video lectures.'],
-	['Can I learn from mobile?','Yes, the course is designed for learning through mobile and laptop.'],
-	['What is the regular price?','The regular course price is ₹1,900.'],
-	['What is the current offer price?','The current offer price is ₹499.'],
-	['How do I pay?','Payment is completed through the secure Razorpay hosted payment page.'],
-	['Is this investment advice?','No. The course is educational and informational only.'],
-];
-
-function EnrollButton({label}:{label:string}){
-	return <RazorpayCheckoutButton label={label} className="btn btn-primary w-full sm:w-auto"/>;
+function EnrollButton({label}: {label: string}) { return <RazorpayCheckoutButton label={label} className="btn btn-primary w-full sm:w-auto"/>; }
+function PurchaseCard({final = false}: {final?: boolean}) {
+	return <section className={final ? 'section pt-0' : 'section bg-white py-10 md:py-12'}><div className="container"><div className="course-cta grid items-center gap-7 p-6 text-white sm:p-8 lg:grid-cols-[1fr_auto] lg:gap-10"><div><p className="offer-label">{final ? 'Complete course access' : 'Share Market Complete Course'}</p><h2 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">{final ? 'Ready to Start Learning the Share Market?' : 'Beginner → Advanced, in one structured course.'}</h2><p className="mt-3 max-w-2xl leading-7 text-slate-300">{final ? '13+ hours of structured video learning, from fundamentals to practical chart analysis.' : 'Study market fundamentals, technical analysis, price action and risk-aware trading concepts at your own pace.'}</p><div className="mt-5 flex flex-wrap gap-2"><span className="dark-chip">13+ hours video learning</span><span className="dark-chip">Self-paced</span><span className="dark-chip">Educational content</span></div></div><div className="cta-price grid gap-2 lg:min-w-64"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Regular</p><p className="mt-1 text-lg font-bold text-slate-300 line-through">₹1,900</p></div><div><p className="text-xs font-bold uppercase tracking-wider text-emerald-200">Offer price</p><p className="text-5xl font-black text-white">₹499</p><p className="mt-1 font-bold text-yellow-300">Save ₹1,401</p></div><div className="mt-3"><EnrollButton label="Get Full Course – ₹499"/></div><p className="text-xs leading-5 text-slate-300"><LockKeyhole className="mr-1 inline" size={12}/>Secure payment powered by Razorpay</p></div></div>{!final && <p className="mt-4 text-center text-xs text-slate-500">Educational content only. Market investments involve risk.</p>}</div></section>;
 }
 
-export default function Course(){
-	return <>
-		<Header/>
-		<main>
-			<section className="dark-section relative overflow-hidden py-16 md:py-24">
-				<div className="container grid items-center gap-10 lg:grid-cols-[1.25fr_.75fr]">
-					<div>
-						<span className="eyebrow">Structured market education</span>
-						<h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight text-white md:text-6xl">Build practical market knowledge, step by step.</h1>
-						<p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">A focused share-market course that moves from fundamentals to technical analysis, chart reading and risk-aware trading concepts.</p>
-						<div className="mt-8 grid gap-3 text-slate-200 sm:grid-cols-3">
-							<p className="flex items-center gap-2"><span aria-hidden="true">🎥</span>13+ Hours Video Lectures</p>
-							<p className="flex items-center gap-2"><span aria-hidden="true">📚</span>Structured Learning</p>
-							<p className="flex items-center gap-2"><span aria-hidden="true">♾️</span>Lifetime Access</p>
-						</div>
-					</div>
-					<aside className="rounded-2xl border border-white/15 bg-white p-6 shadow-2xl sm:p-8">
-						<p className="text-sm font-bold uppercase tracking-wide text-slate-500">Course offer</p>
-						<p className="mt-5 text-lg text-slate-500 line-through">₹1,900</p>
-						<p className="text-6xl font-black text-green-700">₹499 <span className="text-base font-bold text-slate-500">ONLY</span></p>
-						<div className="mt-6"><EnrollButton label="Get Full Course – ₹499"/></div>
-						<p className="mt-4 text-xs leading-5 text-slate-500">Secure payment is handled on Razorpay’s hosted payment page.</p>
-					</aside>
-				</div>
-			</section>
-
-			<section className="section">
-				<div className="container grid gap-10 lg:grid-cols-[1fr_.8fr]">
-					<div className="prose">
-						<span className="tag">LEARN WITH A CLEAR ROADMAP</span>
-						<h2 className="mt-4">Share Market Course Online: Learn Trading from Beginner to Advanced</h2>
-						<p>Learning the share market can be confusing when you are starting with random videos, different strategies and complicated charts. A structured learning path can make it easier to understand the important concepts step by step.</p>
-						<p>The TradeLearnIndia Share Market Complete Course is designed for learners who want to understand the stock market, trading concepts, technical analysis and practical chart-based learning in a structured way. The course includes 13+ hours of video lectures and follows a beginner-to-advanced learning approach.</p>
-					</div>
-					<div className="card h-fit border-l-4 border-l-green-500">
-						<h2 className="text-2xl font-black">Built for steady learning</h2>
-						<p className="muted mt-3 leading-7">Explore core market concepts, read charts, and study risk-aware trading topics in a clear sequence.</p>
-						<div className="mt-5 flex flex-wrap gap-2"><span className="tag">13+ hours</span><span className="tag">Self-paced</span><span className="tag">Beginner → Advanced</span></div>
-					</div>
-				</div>
-			</section>
-
-			<section className="section bg-white">
-				<div className="container">
-					<div className="max-w-2xl"><span className="tag">COURSE OUTCOMES</span><h2 className="mt-4 text-3xl font-black">What Will You Learn?</h2><p className="muted mt-3 leading-7">Build familiarity with the market and chart-based topics through a structured series of lessons.</p></div>
-					<div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{learningTopics.map((topic,index)=><article key={topic} className="card transition duration-200 hover:-translate-y-1 hover:border-green-300">
-							<span className="text-sm font-black text-green-700">MODULE {String(index+1).padStart(2,'0')}</span><h3 className="mt-3 text-lg font-black">{topic}</h3><p className="muted mt-2 text-sm">Clear concepts and practical context to support your learning.</p>
-						</article>)}
-					</div>
-				</div>
-			</section>
-
-			<section className="section">
-				<div className="container">
-					<div className="max-w-2xl"><span className="tag">YOUR LEARNING PATH</span><h2 className="mt-4 text-3xl font-black">Beginner to Advanced Roadmap</h2></div>
-					<ol className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-						{roadmap.map((step,index)=><li key={step} className="flex min-h-20 items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-							<span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-green-100 font-black text-green-800">{index+1}</span><span className="font-bold">{step}</span>
-						</li>)}
-					</ol>
-				</div>
-			</section>
-
-			<section className="section bg-white">
-				<div className="container grid gap-10 lg:grid-cols-[.8fr_1.2fr]">
-					<div><span className="tag">WHO CAN JOIN?</span><h2 className="mt-4 text-3xl font-black">Learn at your own pace</h2></div>
-					<p className="muted text-lg leading-8">This course is suitable for beginners who want to start learning about the share market, as well as learners who already understand the basics and want to explore technical analysis, price action and trading strategies in a more organised way. The video-based format allows learners to study at their own pace using a mobile phone or laptop.</p>
-				</div>
-			</section>
-
-			<section className="section">
-				<div className="container">
-					<div className="max-w-2xl"><span className="tag">COURSE ACCESS</span><h2 className="mt-4 text-3xl font-black">What You Get</h2></div>
-					<div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-						{courseBenefits.map(({icon:Icon,title})=><article key={title} className="card transition duration-200 hover:-translate-y-1 hover:border-green-300"><Icon aria-hidden="true" className="text-green-700" size={26}/><h3 className="mt-4 font-bold">{title}</h3></article>)}
-					</div>
-				</div>
-			</section>
-
-			<section className="section bg-white">
-				<div className="container grid gap-10 lg:grid-cols-[1.1fr_.9fr]">
-					<div><span className="tag">COURSE CURRICULUM</span><h2 className="mt-4 text-3xl font-black">Explore the course modules</h2><div className="mt-6 grid gap-3">
-						{courseModules.map(module=><article key={module[0]} className="flex gap-4 rounded-xl border border-slate-200 p-4"><span className="tag h-fit">{module[0]}</span><div><h3 className="font-black">{module[1]}</h3><p className="muted mt-1 text-sm leading-6">{module[2]}</p></div></article>)}
-					</div></div>
-					<aside className="dark-section h-fit rounded-2xl p-6 text-white sm:p-8">
-						<span className="eyebrow">Course access</span><p className="mt-6 text-sm text-slate-300">Regular Price</p><p className="text-xl font-bold line-through text-slate-400">₹1,900</p><p className="mt-4 text-sm text-slate-300">Offer Price</p><p className="text-5xl font-black text-green-300">₹499</p><p className="mt-3 font-bold text-yellow-300">Save ₹1,401</p><div className="mt-7"><EnrollButton label="Get Course for ₹499"/></div>
-					</aside>
-				</div>
-			</section>
-
-			<section className="section">
-					<div className="container rounded-xl bg-[#0b1d31] px-6 py-10 text-white sm:px-10 md:py-14">
-					<div className="max-w-3xl"><span className="eyebrow">Start learning</span><h2 className="mt-5 text-3xl font-black md:text-4xl">Start Your Share Market Learning Journey</h2><p className="mt-5 leading-8 text-slate-300">If you are looking for a structured share market course online that takes you from basic concepts towards advanced trading topics, the TradeLearnIndia course can give you a clear learning roadmap.</p><p className="mt-3 leading-8 text-slate-300">Start learning at your own pace and build your understanding of the market, charts, trading concepts and risk management.</p><div className="mt-7"><EnrollButton label="Start Learning – ₹499"/></div></div>
-				</div>
-			</section>
-
-			<section className="section bg-white">
-				<div className="container max-w-4xl"><span className="tag">COMMON QUESTIONS</span><h2 className="mt-4 text-3xl font-black">Frequently Asked Questions</h2><div className="mt-6 grid gap-3">
-					{questions.map(([question,answer])=><details key={question} className="card group"><summary className="cursor-pointer list-none pr-8 font-black marker:hidden">{question}<span aria-hidden="true" className="float-right text-green-700 group-open:rotate-45">+</span></summary><p className="muted mt-4 leading-7">{answer}</p></details>)}
-				</div></div>
-			</section>
-
-			<section className="section">
-				<div className="container"><div className="notice"><h2 className="text-xl font-black">Important Disclaimer</h2><p className="mt-3 leading-7">This course is provided for educational and informational purposes only. Trading and investing in financial markets involve risk. No profit, return or specific financial result is guaranteed. The course should not be considered personalised financial or investment advice. Learners should conduct their own research and make financial decisions according to their individual risk tolerance.</p></div></div>
-			</section>
-		</main>
-		<Footer/>
-	</>;
+export default function Course() {
+	return <><Header/><main>
+		<section className="dark-section relative overflow-hidden py-14 md:py-20"><div className="container max-w-5xl text-center"><span className="eyebrow">Structured market education</span><h1 className="mx-auto mt-4 max-w-4xl text-4xl font-extrabold leading-tight text-white md:text-6xl">Build practical market knowledge, step by step.</h1><p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-300">A focused share-market course that moves from fundamentals to technical analysis, chart reading and risk-aware trading concepts.</p><div className="mx-auto mt-7 flex max-w-2xl flex-wrap justify-center gap-x-6 gap-y-3 text-sm font-semibold text-slate-200"><span>13+ Hours Video Learning</span><span>Beginner → Advanced</span><span>Self-paced format</span></div></div></section>
+		<PurchaseCard/>
+		<section className="section"><div className="container grid gap-9 lg:grid-cols-[1.1fr_.9fr] lg:items-center"><div className="prose"><span className="tag">COURSE OVERVIEW</span><h2 className="mt-4">Share Market Complete Course</h2><p>This course provides a structured learning path from share market fundamentals to technical analysis, price action, trading concepts, risk management and practical chart analysis.</p><p>Rather than jumping between disconnected videos, you can study each concept in a considered sequence and build context as you go.</p></div><div className="card border-l-4 border-l-emerald-500"><p className="section-kicker">A clear learning path</p><p className="mt-3 text-xl font-bold leading-8 text-slate-800">Learn the foundations first, then study chart-based concepts with risk awareness in mind.</p><div className="mt-5 flex flex-wrap gap-2"><span className="tag">13+ hours</span><span className="tag">Video learning</span><span className="tag">Self-paced</span></div></div></div></section>
+		<section className="section bg-white"><div className="container"><div className="section-heading"><span className="tag">WHAT YOU WILL LEARN</span><h2>Core market and chart-learning topics</h2><p>Each module is focused on a specific part of the learning journey, with practical context to help you study the concepts clearly.</p></div><div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{topics.map(([title, description, Icon], index) => <article key={title} className="card flex min-h-56 flex-col transition duration-200 hover:-translate-y-1 hover:border-emerald-300"><div className="flex items-start justify-between"><span className="module-number">{String(index + 1).padStart(2, '0')}</span><span className="topic-icon"><Icon size={20}/></span></div><h3 className="mt-5 text-lg font-black">{title}</h3><p className="muted mt-2 text-sm leading-6">{description}</p></article>)}</div></div></section>
+		<section className="section"><div className="container"><div className="section-heading"><span className="tag">BEGINNER TO ADVANCED ROADMAP</span><h2>A practical learning journey</h2></div><ol className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{roadmap.map((step, index) => <li key={step} className="flex min-h-24 items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-sm font-black text-emerald-800">{String(index + 1).padStart(2, '0')}</span><span className="text-sm font-bold text-slate-800">{step}</span></li>)}</ol></div></section>
+		<section className="section bg-white"><div className="container"><div className="section-heading"><span className="tag">COURSE HIGHLIGHTS</span><h2>Designed for focused, flexible learning</h2></div><div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{highlights.map(([title, Icon]) => <article key={title} className="card"><Icon aria-hidden="true" className="text-emerald-700" size={25}/><h3 className="mt-4 font-bold">{title}</h3></article>)}</div></div></section>
+		<section className="section"><div className="container"><div className="section-heading"><span className="tag">WHO IS THIS COURSE FOR?</span><h2>For learners seeking a structured foundation</h2></div><div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{['Beginners starting with share market basics', 'Learners building market fundamentals', 'Learners interested in technical analysis', 'Learners seeking chart-based study'].map((item, index) => <article key={item} className="card"><span className="module-number">0{index + 1}</span><p className="mt-4 font-bold leading-6 text-slate-800">{item}</p></article>)}</div></div></section>
+		<section className="section bg-white"><div className="container grid gap-9 lg:grid-cols-2"><div><span className="tag">WHAT YOU WILL UNDERSTAND</span><h2 className="mt-4 text-3xl font-black">Build context for informed study</h2><p className="muted mt-4 leading-7">The course is designed to help you learn, understand and practise how these concepts are approached—without promises about market outcomes.</p></div><ul className="grid gap-3 sm:grid-cols-2">{['How the share market works', 'How to read basic charts', 'How technical analysis is used', 'How support and resistance are studied', 'How price action is interpreted', 'How trading strategies are structured', 'Why risk management matters', 'How psychology affects decisions'].map(item => <li key={item} className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700"><Check className="shrink-0 text-emerald-600" size={18}/>{item}</li>)}</ul></div></section>
+		<section className="section"><div className="container grid gap-8 lg:grid-cols-[.8fr_1.2fr]"><div><span className="tag">COURSE FORMAT</span><h2 className="mt-4 text-3xl font-black">Learn in a format that fits your schedule</h2></div><dl className="grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 sm:grid-cols-2">{[['Course level', 'Beginner → Advanced'], ['Duration', '13+ Hours'], ['Format', 'Video Learning'], ['Learning style', 'Self-paced']].map(([term, detail]) => <div key={term} className="bg-white p-5"><dt className="text-sm font-bold text-slate-500">{term}</dt><dd className="mt-1 text-lg font-black text-slate-800">{detail}</dd></div>)}</dl></div></section>
+		<section className="section bg-white"><div className="container grid gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-center"><div><span className="tag">WHY STRUCTURED LEARNING?</span><h2 className="mt-4 text-3xl font-black">Less jumping between disconnected concepts</h2><p className="muted mt-4 leading-8">Market learning can feel fragmented when videos, chart ideas and strategies are encountered without a clear sequence. This course organises the journey from fundamentals to practical concepts, so each topic has a useful place in the bigger picture.</p></div><div className="rounded-xl border border-slate-700 bg-[#0b1d31] p-6 text-white"><p className="offer-label">Illustrative chart study</p><div className="mt-6 grid h-36 grid-cols-10 items-end gap-2 border-b border-slate-600 pb-3">{[35, 52, 41, 68, 55, 82, 62, 76, 95, 84].map((height, index) => <span key={index} className={index === 3 || index === 6 ? 'bg-rose-400' : 'bg-emerald-400'} style={{height: `${height}%`}}/>)}</div><div className="mt-4 flex items-center justify-between text-xs text-slate-300"><span>Trend and level observation</span><span>For learning illustration only</span></div></div></div></section>
+		<section className="section"><div className="container"><div className="section-heading"><span className="tag">COURSE CURRICULUM</span><h2>Explore the course modules</h2><p>Module-level topics are shown below; the course is organised around these concepts.</p></div><div className="mt-8 grid gap-3">{courseModules.map(module => <article key={module[0]} className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"><span className="tag h-fit">{module[0]}</span><div><h3 className="font-black">{module[1]}</h3><p className="muted mt-1 text-sm leading-6">{module[2]}</p></div></article>)}</div></div></section>
+		<section className="section bg-white"><div className="container max-w-4xl"><span className="tag">COMMON QUESTIONS</span><h2 className="mt-4 text-3xl font-black">Frequently Asked Questions</h2><div className="mt-6 grid gap-3">{questions.map(([question, answer]) => <details key={question} className="card group"><summary className="cursor-pointer list-none pr-8 font-black marker:hidden">{question}<span aria-hidden="true" className="float-right text-emerald-700 group-open:rotate-45">+</span></summary><p className="muted mt-4 leading-7">{answer}</p></details>)}</div></div></section>
+		<PurchaseCard final/>
+		<section className="section pt-0"><div className="container"><div className="notice"><h2 className="text-xl font-black">Important Disclaimer</h2><p className="mt-3 leading-7">Disclaimer: This course is provided for educational purposes only. It does not constitute investment, financial or trading advice. Financial markets involve risk, and no profit or return is guaranteed.</p></div></div></section>
+	</main><Footer/></>;
 }
