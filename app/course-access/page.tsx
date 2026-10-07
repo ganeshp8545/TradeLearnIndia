@@ -1,6 +1,6 @@
 import {cookies} from 'next/headers';
 import {BookOpen, Check, Clock3, GraduationCap} from 'lucide-react';
-import {COURSE_NAME, CourseAccessTimingEvent, getValidCourseAccessRecord} from '@/lib/course-access';
+import {COURSE_NAME, COURSE_PRICE_INR, CourseAccessTimingEvent, formatINR, getValidCourseAccessRecord} from '@/lib/course-access';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {title: 'Course access | CampusEduX', robots: {index: false, follow: false}};
@@ -58,7 +58,7 @@ export default async function CourseAccess({searchParams}: {searchParams: Promis
 				{hasAccess ? <>
 					<p className="flex items-center gap-2 font-bold text-green-800"><Check size={20}/>Payment Successful</p>
 					<h1 className="mt-3 text-3xl font-black">Thank you for purchasing<br/>Share Market Complete Course</h1>
-					<p className="mt-3 font-bold text-green-800">₹1 Payment Verified</p>
+					<p className="mt-3 font-bold text-green-800">{formatINR(COURSE_PRICE_INR)} Payment Verified</p>
 					<p className="muted mt-3">Your course is ready. Your course access has been securely verified.</p>
 					<div className="mt-6 divide-y divide-slate-200 border-y border-slate-200">
 						<p className="flex items-center gap-3 py-4"><BookOpen size={19} className="text-green-700"/><span>{COURSE_NAME}</span></p>

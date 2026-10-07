@@ -1,11 +1,9 @@
 import 'server-only';
 import {createHash, randomBytes} from 'node:crypto';
+import {COURSE_NAME, COURSE_ORIGINAL_PRICE_INR, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_PRICE_SAVING_INR, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR} from '@/lib/course-pricing';
 import {verifyRazorpayOrderSignature} from '@/lib/razorpay-webhook';
 
-export const COURSE_NAME = 'Share Market Complete Course';
-export const COURSE_SLUG = 'share-market-complete-course';
-export const COURSE_PRICE_INR = 1;
-export const TEST_COURSE_PRICE_INR = 1;
+export {COURSE_NAME, COURSE_ORIGINAL_PRICE_INR, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_PRICE_SAVING_INR, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR};
 
 export function getCourseDriveUrl(): URL {
 	const configuredUrl = process.env.COURSE_DRIVE_URL;
