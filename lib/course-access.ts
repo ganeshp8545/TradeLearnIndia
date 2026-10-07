@@ -1,9 +1,10 @@
 import 'server-only';
-import {createHash, createHmac, randomBytes} from 'node:crypto';
+import {createHash, randomBytes} from 'node:crypto';
+import {verifyRazorpayOrderSignature} from '@/lib/razorpay-webhook';
 
 export const COURSE_NAME = 'Share Market Complete Course';
 export const COURSE_SLUG = 'share-market-complete-course';
-export const COURSE_PRICE_INR = 499;
+export const COURSE_PRICE_INR = 1;
 export const TEST_COURSE_PRICE_INR = 1;
 
 export function getCoursePricePaise(): number {
@@ -45,6 +46,24 @@ export type CoursePayment = {
 	access_session_expires_at?: string | null;
 };
 
+type RazorpayOrder = {
+	id?: string;
+	amount?: number;
+	currency?: string;
+	notes?: {course?: string};
+};
+
+type RazorpayPayment = {
+	id?: string;
+	order_id?: string | null;
+	amount?: number;
+	currency?: string;
+	status?: string;
+	email?: string | null;
+	contact?: string | null;
+	notes?: {course?: string};
+};
+
 function requiredEnv(name: string): string {
 	const value = process.env[name];
 	if (!value) throw new Error(`Missing required environment variable: ${name}`);
@@ -74,6 +93,18 @@ async function supabaseRequest<T>(path: string, init: RequestInit = {}): Promise
 	});
 	if (!response.ok) throw new Error(`Supabase request failed (${response.status})`);
 	if (response.status === 204) return undefined as T;
+	return response.json() as Promise<T>;
+}
+
+async function fetchRazorpay<T>(resource: string): Promise<T> {
+	const keyId = requiredEnv('RAZORPAY_KEY_ID');
+	const keySecret = requiredEnv('RAZORPAY_KEY_SECRET');
+	const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+	const response = await fetch(`https://api.razorpay.com/v1/${resource}`, {
+		headers: {Authorization: `Basic ${credentials}`},
+		cache: 'no-store',
+	});
+	if (!response.ok) throw new Error(`Razorpay API request failed (${response.status}) for ${resource}`);
 	return response.json() as Promise<T>;
 }
 
@@ -158,10 +189,88 @@ export async function getPaymentByTokenHash(
 	return rows[0] ?? null;
 }
 
+export async function getValidCourseAccessRecord(
+	token?: string | null,
+	sessionToken?: string | null,
+): Promise<CoursePayment | null> {
+	if (token) {
+		const payment = await getPaymentByTokenHash('access_token_hash', hashAccessToken(token), 'access_token_expires_at');
+		if (payment) return payment;
+	}
+	if (sessionToken) {
+		return await getPaymentByTokenHash('access_session_hash', hashAccessToken(sessionToken), 'access_session_expires_at');
+	}
+	return null;
+}
+
+export async function verifyAndGrantCourseAccess({
+	orderId,
+	paymentId,
+	signature,
+}: {
+	orderId: string;
+	paymentId: string;
+	signature: string;
+}): Promise<{status: 'success' | 'pending' | 'failed' | 'not_found'; accessToken?: string; payment?: CoursePayment}> {
+	if (!orderId || !paymentId || !signature) {
+		return {status: 'not_found'};
+	}
+
+	const storedPayment = await getPaymentByOrderId(orderId);
+	if (!storedPayment || storedPayment.razorpay_order_id !== orderId) {
+		return {status: 'pending'};
+	}
+
+	if (!verifyRazorpayOrderSignature(orderId, paymentId, signature, requiredEnv('RAZORPAY_KEY_SECRET'))) {
+		return {status: 'failed'};
+	}
+
+	const expectedAmount = getCoursePricePaise();
+	const [order, payment] = await Promise.all([
+		fetchRazorpay<RazorpayOrder>(`orders/${encodeURIComponent(orderId)}`),
+		fetchRazorpay<RazorpayPayment>(`payments/${encodeURIComponent(paymentId)}`),
+	]);
+
+	const orderMatches = order.id === orderId
+		&& order.amount === expectedAmount
+		&& order.currency === 'INR'
+		&& (order.notes?.course ?? COURSE_SLUG) === COURSE_SLUG
+		&& storedPayment.amount === expectedAmount
+		&& storedPayment.currency === 'INR'
+		&& storedPayment.course_name === COURSE_NAME
+		&& storedPayment.course_slug === COURSE_SLUG;
+	const paymentMatches = payment.id === paymentId
+		&& payment.order_id === orderId
+		&& payment.amount === expectedAmount
+		&& payment.currency === 'INR'
+		&& (payment.status === 'captured' || payment.status === 'authorized');
+
+	if (!orderMatches || !paymentMatches) {
+		return {status: 'pending'};
+	}
+
+	await recordCoursePayment({
+		orderId,
+		paymentId,
+		name: payment.contact ?? null,
+		email: payment.email ?? null,
+		amount: payment.amount ?? expectedAmount,
+		currency: payment.currency ?? 'INR',
+		status: 'success',
+		courseSlug: COURSE_SLUG,
+	});
+
+	const finalPayment = await getPaymentByOrderId(orderId);
+	const accessToken = await grantCourseAccessToken(orderId, paymentId);
+	if (!accessToken || !finalPayment) {
+		return {status: 'pending'};
+	}
+
+	return {status: 'success', accessToken, payment: finalPayment};
+}
+
 export async function grantCourseAccessToken(orderId: string, paymentId: string): Promise<string | null> {
-	const token = createHmac('sha256', requiredEnv('SUPABASE_SERVICE_ROLE_KEY'))
-		.update(`course-access:${orderId}:${paymentId}`)
-		.digest('base64url');
+	const token = createAccessToken();
 	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 	const query = new URLSearchParams({
 		select: 'id',
@@ -171,7 +280,7 @@ export async function grantCourseAccessToken(orderId: string, paymentId: string)
 		course_access_granted: 'eq.true',
 		amount: `eq.${getCoursePricePaise()}`,
 		course_name: `eq.${COURSE_NAME}`,
-		and: `(or(access_session_hash.is.null,access_session_expires_at.lt.${new Date().toISOString()}))`,
+		and: `(or(access_token_hash.is.null,access_token_expires_at.lt.${new Date().toISOString()}))`,
 	});
 	const rows = await supabaseRequest<Array<{id: string}>>(`course_payments?${query}`, {
 		method: 'PATCH',

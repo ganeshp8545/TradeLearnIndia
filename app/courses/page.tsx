@@ -106,8 +106,8 @@ export default function Courses() {
 
 			<section className="section bg-white">
 				<div className="container"><div className="course-cta grid items-center gap-7 p-6 text-white sm:p-8 lg:grid-cols-[1fr_auto] lg:gap-10">
-					<div><span className="offer-label">Limited-time course offer</span><h2 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">Limited-Time Course Offer</h2><p className="mt-3 max-w-2xl leading-7 text-slate-300">The regular course price is ₹1,900, but the current launch offer is available for only ₹499. Save ₹1,401 on the regular price.</p></div>
-					<div className="cta-price"><p className="text-sm font-bold text-slate-300 line-through">₹1,900</p><p className="mt-1 text-5xl font-black text-white">₹499</p><div className="mt-4"><RazorpayCheckoutButton label="Enroll Now – ₹499" className="btn btn-gold w-full"/></div></div>
+					<div><span className="offer-label">Limited-time course offer</span><h2 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">Limited-Time Course Offer</h2><p className="mt-3 max-w-2xl leading-7 text-slate-300">The regular course price is ₹1,900, but the current launch offer is available for only ₹1. Save ₹1,401 on the regular price.</p></div>
+					<div className="cta-price"><p className="text-sm font-bold text-slate-300 line-through">₹1,900</p><p className="mt-1 text-5xl font-black text-white">₹1</p><div className="mt-4"><RazorpayCheckoutButton label="Enroll Now – ₹1" className="btn btn-gold w-full"/></div></div>
 				</div></div>
 			</section>
 

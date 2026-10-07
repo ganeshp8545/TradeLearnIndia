@@ -1,6 +1,6 @@
 import {cookies} from 'next/headers';
 import {NextResponse} from 'next/server';
-import {consumeAccessCredential, hashAccessToken} from '@/lib/course-access';
+import {consumeAccessCredential, getValidCourseAccessRecord, hashAccessToken} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +36,11 @@ export async function POST(request: Request) {
 		const cookieStore = await cookies();
 		const token = cookieStore.get('course_access_token')?.value;
 		const session = cookieStore.get('course_access_session')?.value;
+		const authorization = await getValidCourseAccessRecord(token, session);
+		if (!authorization) {
+			return NextResponse.redirect(new URL('/course-access?state=invalid', request.url), 303);
+		}
+
 		const used = token
 			? await consumeAccessCredential('access_token_hash', 'access_token_expires_at', hashAccessToken(token))
 			: session

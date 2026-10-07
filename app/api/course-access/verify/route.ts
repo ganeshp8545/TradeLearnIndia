@@ -1,5 +1,5 @@
 import {NextResponse} from 'next/server';
-import {exchangeAccessTokenForSession, hashAccessToken, createAccessToken} from '@/lib/course-access';
+import {createAccessToken, exchangeAccessTokenForSession, getValidCourseAccessRecord, hashAccessToken} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
@@ -8,6 +8,9 @@ export async function GET(request: Request) {
 	if (!token || token.length > 128) return NextResponse.redirect(new URL('/course-access?state=invalid', request.url));
 
 	try {
+		const activeAccess = await getValidCourseAccessRecord(token);
+		if (!activeAccess) return NextResponse.redirect(new URL('/course-access?state=invalid', request.url));
+
 		const sessionToken = createAccessToken();
 		const payment = await exchangeAccessTokenForSession(hashAccessToken(token), hashAccessToken(sessionToken));
 		if (!payment) return NextResponse.redirect(new URL('/course-access?state=invalid', request.url));
