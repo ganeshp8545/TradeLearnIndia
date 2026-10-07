@@ -1,24 +1,55 @@
 import {cookies} from 'next/headers';
 import {BookOpen, Check, Clock3, GraduationCap} from 'lucide-react';
-import {COURSE_NAME, getValidCourseAccessRecord} from '@/lib/course-access';
+import {COURSE_NAME, CourseAccessTimingEvent, getValidCourseAccessRecord} from '@/lib/course-access';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {title: 'Course access | CampusEduX', robots: {index: false, follow: false}};
 
+function diagnostic(event: string, fields: Record<string, unknown> = {}) {
+	console.info('COURSE_ACCESS_DIAGNOSTIC', JSON.stringify({
+		timestamp: new Date().toISOString(),
+		route: '/course-access',
+		method: 'GET',
+		event,
+		...fields,
+	}));
+}
+
 export default async function CourseAccess({searchParams}: {searchParams: Promise<{state?: string}>}) {
+	const startedAt = Date.now();
+	const timing = ({operation, durationMs, success}: CourseAccessTimingEvent) => {
+		diagnostic('SUPABASE_OPERATION_END', {operation, durationMs, success});
+	};
+	diagnostic('PAGE_START');
 	const [cookieStore, resolvedSearchParams] = await Promise.all([cookies(), searchParams]);
 	const accessToken = cookieStore.get('course_access_token')?.value;
 	const sessionToken = cookieStore.get('course_access_session')?.value;
+	diagnostic('CREDENTIAL_TYPE_DETECTED', {
+		rawTokenDetected: Boolean(accessToken),
+		sessionDetected: Boolean(sessionToken),
+	});
 	let hasAccess = false;
 	let serverError = resolvedSearchParams.state === 'error';
 	if (accessToken || sessionToken) {
 		try {
-			hasAccess = Boolean(await getValidCourseAccessRecord(accessToken, sessionToken));
-		} catch (error) {
-			console.error('Course access session lookup failed', error);
+			const validationStartedAt = Date.now();
+			diagnostic('SESSION_VALIDATION_START');
+			hasAccess = Boolean(await getValidCourseAccessRecord(accessToken, sessionToken, timing));
+			diagnostic('SESSION_VALIDATION_END', {
+				durationMs: Date.now() - validationStartedAt,
+				authorized: hasAccess,
+			});
+		} catch {
+			diagnostic('SESSION_VALIDATION_ERROR');
 			serverError = true;
 		}
 	}
+	diagnostic('PAGE_END', {
+		authorized: hasAccess,
+		httpStatus: 200,
+		redirectGenerated: false,
+		totalDurationMs: Date.now() - startedAt,
+	});
 
 	return <main className="min-h-[calc(100dvh-64px)] bg-slate-50 px-4 py-10 text-slate-900 sm:py-12">
 		<div className="mx-auto max-w-2xl">

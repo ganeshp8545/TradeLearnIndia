@@ -24,6 +24,14 @@ export function getCoursePricePaise(): number {
 
 export type PaymentStatus = 'pending' | 'success' | 'failed';
 
+export type CourseAccessTimingEvent = {
+	operation: string;
+	durationMs: number;
+	success: boolean;
+};
+
+export type CourseAccessTimingObserver = (event: CourseAccessTimingEvent) => void;
+
 export type CoursePayment = {
 	id: string;
 	razorpay_payment_link_id: string | null;
@@ -78,7 +86,15 @@ export function createAccessToken(): string {
 	return randomBytes(32).toString('base64url');
 }
 
-async function supabaseRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function supabaseRequest<T>(
+	path: string,
+	init: RequestInit = {},
+	timing?: CourseAccessTimingObserver,
+	operation = 'supabase_request',
+): Promise<T> {
+	const startedAt = Date.now();
+	let success = false;
+	try {
 	const baseUrl = requiredEnv('SUPABASE_URL').replace(/\/$/, '');
 	const serviceKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
 	const response = await fetch(`${baseUrl}/rest/v1/${path}`, {
@@ -92,11 +108,22 @@ async function supabaseRequest<T>(path: string, init: RequestInit = {}): Promise
 		},
 	});
 	if (!response.ok) throw new Error(`Supabase request failed (${response.status})`);
-	if (response.status === 204) return undefined as T;
-	return response.json() as Promise<T>;
+	const result = response.status === 204 ? undefined as T : await response.json() as T;
+	success = true;
+	return result;
+	} finally {
+		timing?.({operation, durationMs: Date.now() - startedAt, success});
+	}
 }
 
-async function fetchRazorpay<T>(resource: string): Promise<T> {
+async function fetchRazorpay<T>(
+	resource: string,
+	timing?: CourseAccessTimingObserver,
+	operation = 'razorpay_request',
+): Promise<T> {
+	const startedAt = Date.now();
+	let success = false;
+	try {
 	const keyId = requiredEnv('RAZORPAY_KEY_ID');
 	const keySecret = requiredEnv('RAZORPAY_KEY_SECRET');
 	const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
@@ -105,7 +132,12 @@ async function fetchRazorpay<T>(resource: string): Promise<T> {
 		cache: 'no-store',
 	});
 	if (!response.ok) throw new Error(`Razorpay API request failed (${response.status}) for ${resource}`);
-	return response.json() as Promise<T>;
+	const result = await response.json() as T;
+	success = true;
+	return result;
+	} finally {
+		timing?.({operation, durationMs: Date.now() - startedAt, success});
+	}
 }
 
 export async function recordCoursePayment(payment: {
@@ -118,7 +150,7 @@ export async function recordCoursePayment(payment: {
 	currency: string;
 	status: PaymentStatus;
 	courseSlug?: string;
-}): Promise<void> {
+}, timing?: CourseAccessTimingObserver): Promise<void> {
 	const payload = {
 		razorpay_payment_link_id: payment.linkId ?? null,
 		razorpay_payment_id: payment.paymentId ?? null,
@@ -147,16 +179,16 @@ export async function recordCoursePayment(payment: {
 			p_currency: payload.currency,
 			p_course_slug: payload.course_slug,
 		}),
-	});
+	}, timing, 'supabase_payment_record');
 }
 
-export async function getPaymentByOrderId(orderId: string): Promise<CoursePayment | null> {
+export async function getPaymentByOrderId(orderId: string, timing?: CourseAccessTimingObserver, operation = 'supabase_payment_lookup'): Promise<CoursePayment | null> {
 	const query = new URLSearchParams({
 		select: '*',
 		razorpay_order_id: `eq.${orderId}`,
 		limit: '1',
 	});
-	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`);
+	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {}, timing, operation);
 	return rows[0] ?? null;
 }
 
@@ -174,6 +206,7 @@ export async function getPaymentByTokenHash(
 	column: 'access_token_hash' | 'access_session_hash',
 	tokenHash: string,
 	validityColumn: 'access_token_expires_at' | 'access_session_expires_at',
+	timing?: CourseAccessTimingObserver,
 ): Promise<CoursePayment | null> {
 	const query = new URLSearchParams({
 		select: '*',
@@ -185,20 +218,22 @@ export async function getPaymentByTokenHash(
 		course_name: `eq.${COURSE_NAME}`,
 		limit: '1',
 	});
-	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`);
+	const operation = column === 'access_token_hash' ? 'supabase_raw_token_lookup' : 'supabase_session_lookup';
+	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {}, timing, operation);
 	return rows[0] ?? null;
 }
 
 export async function getValidCourseAccessRecord(
 	token?: string | null,
 	sessionToken?: string | null,
+	timing?: CourseAccessTimingObserver,
 ): Promise<CoursePayment | null> {
 	if (token) {
-		const payment = await getPaymentByTokenHash('access_token_hash', hashAccessToken(token), 'access_token_expires_at');
+		const payment = await getPaymentByTokenHash('access_token_hash', hashAccessToken(token), 'access_token_expires_at', timing);
 		if (payment) return payment;
 	}
 	if (sessionToken) {
-		return await getPaymentByTokenHash('access_session_hash', hashAccessToken(sessionToken), 'access_session_expires_at');
+		return await getPaymentByTokenHash('access_session_hash', hashAccessToken(sessionToken), 'access_session_expires_at', timing);
 	}
 	return null;
 }
@@ -211,12 +246,12 @@ export async function verifyAndGrantCourseAccess({
 	orderId: string;
 	paymentId: string;
 	signature: string;
-}): Promise<{status: 'success' | 'pending' | 'failed' | 'not_found'; accessToken?: string; payment?: CoursePayment}> {
+}, timing?: CourseAccessTimingObserver): Promise<{status: 'success' | 'pending' | 'failed' | 'not_found'; accessToken?: string; payment?: CoursePayment}> {
 	if (!orderId || !paymentId || !signature) {
 		return {status: 'not_found'};
 	}
 
-	const storedPayment = await getPaymentByOrderId(orderId);
+	const storedPayment = await getPaymentByOrderId(orderId, timing);
 	if (!storedPayment || storedPayment.razorpay_order_id !== orderId) {
 		return {status: 'pending'};
 	}
@@ -227,8 +262,8 @@ export async function verifyAndGrantCourseAccess({
 
 	const expectedAmount = getCoursePricePaise();
 	const [order, payment] = await Promise.all([
-		fetchRazorpay<RazorpayOrder>(`orders/${encodeURIComponent(orderId)}`),
-		fetchRazorpay<RazorpayPayment>(`payments/${encodeURIComponent(paymentId)}`),
+		fetchRazorpay<RazorpayOrder>(`orders/${encodeURIComponent(orderId)}`, timing, 'razorpay_order_lookup'),
+		fetchRazorpay<RazorpayPayment>(`payments/${encodeURIComponent(paymentId)}`, timing, 'razorpay_payment_lookup'),
 	]);
 
 	const orderMatches = order.id === orderId
@@ -258,10 +293,10 @@ export async function verifyAndGrantCourseAccess({
 		currency: payment.currency ?? 'INR',
 		status: 'success',
 		courseSlug: COURSE_SLUG,
-	});
+	}, timing);
 
-	const finalPayment = await getPaymentByOrderId(orderId);
-	const accessToken = await grantCourseAccessToken(orderId, paymentId);
+	const finalPayment = await getPaymentByOrderId(orderId, timing, 'supabase_payment_lookup_after_record');
+	const accessToken = await grantCourseAccessToken(orderId, paymentId, timing);
 	if (!accessToken || !finalPayment) {
 		return {status: 'pending'};
 	}
@@ -269,7 +304,7 @@ export async function verifyAndGrantCourseAccess({
 	return {status: 'success', accessToken, payment: finalPayment};
 }
 
-export async function grantCourseAccessToken(orderId: string, paymentId: string): Promise<string | null> {
+export async function grantCourseAccessToken(orderId: string, paymentId: string, timing?: CourseAccessTimingObserver): Promise<string | null> {
 	const token = createAccessToken();
 	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 	const query = new URLSearchParams({
@@ -292,7 +327,7 @@ export async function grantCourseAccessToken(orderId: string, paymentId: string)
 			access_session_hash: null,
 			access_session_expires_at: null,
 		}),
-	});
+	}, timing, 'supabase_access_token_creation');
 	return rows.length ? token : null;
 }
 
@@ -325,6 +360,7 @@ export async function consumeAccessCredential(
 export async function exchangeAccessTokenForSession(
 	tokenHash: string,
 	sessionHash: string,
+	timing?: CourseAccessTimingObserver,
 ): Promise<CoursePayment | null> {
 	const query = new URLSearchParams({
 		select: '*',
@@ -345,7 +381,7 @@ export async function exchangeAccessTokenForSession(
 			access_session_hash: sessionHash,
 			access_session_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
 		}),
-	});
+	}, timing, 'supabase_raw_token_exchange');
 	return rows[0] ?? null;
 }
 

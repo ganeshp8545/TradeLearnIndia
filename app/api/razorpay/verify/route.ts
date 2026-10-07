@@ -1,7 +1,19 @@
 import {NextResponse} from 'next/server';
-import {verifyAndGrantCourseAccess} from '@/lib/course-access';
+import {CourseAccessTimingEvent, verifyAndGrantCourseAccess} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
+
+const ROUTE = '/api/razorpay/verify';
+
+function diagnostic(event: string, fields: Record<string, unknown> = {}) {
+  console.info('COURSE_ACCESS_DIAGNOSTIC', JSON.stringify({
+    timestamp: new Date().toISOString(),
+    route: ROUTE,
+    method: 'POST',
+    event,
+    ...fields,
+  }));
+}
 
 function reply(status: string, httpStatus = 200) {
   return NextResponse.json({status}, {
@@ -11,34 +23,61 @@ function reply(status: string, httpStatus = 200) {
 }
 
 export async function POST(request: Request) {
-  let orderId = '';
-  let paymentId = '';
+  const startedAt = Date.now();
+  const timing = ({operation, durationMs, success}: CourseAccessTimingEvent) => {
+    diagnostic('DEPENDENCY_END', {
+      dependency: operation.startsWith('razorpay_') ? 'razorpay' : 'supabase',
+      operation,
+      durationMs,
+      success,
+    });
+  };
+  const finish = (status: string, httpStatus: number) => {
+    diagnostic('RAZORPAY_VERIFY_END', {
+      state: status,
+      httpStatus,
+      redirectGenerated: false,
+      totalDurationMs: Date.now() - startedAt,
+    });
+  };
+  diagnostic('RAZORPAY_VERIFY_START');
   try {
     const body = await request.json() as {
       razorpay_payment_id?: string;
       razorpay_order_id?: string;
       razorpay_signature?: string;
     };
-    paymentId = body.razorpay_payment_id?.trim() ?? '';
-    orderId = body.razorpay_order_id?.trim() ?? '';
+    const paymentId = body.razorpay_payment_id?.trim() ?? '';
+    const orderId = body.razorpay_order_id?.trim() ?? '';
     const signature = body.razorpay_signature?.trim() ?? '';
 
     if (!paymentId || !orderId || !signature) {
-      console.warn('Razorpay verification rejected', {orderId, paymentId, reason: 'missing_callback_fields'});
-      return reply('not_found', 400);
+      diagnostic('RAZORPAY_VERIFY_REJECTED', {state: 'missing_callback_fields'});
+      const response = reply('not_found', 400);
+      finish('not_found', response.status);
+      return response;
     }
 
-    const result = await verifyAndGrantCourseAccess({orderId, paymentId, signature});
+    const verificationStartedAt = Date.now();
+    const result = await verifyAndGrantCourseAccess({orderId, paymentId, signature}, timing);
+    diagnostic('RAZORPAY_VERIFICATION_END', {
+      durationMs: Date.now() - verificationStartedAt,
+      state: result.status,
+    });
     if (result.status === 'failed') {
-      console.warn('Razorpay verification rejected', {orderId, paymentId, reason: 'invalid_signature'});
-      return reply('failed', 401);
+      const response = reply('failed', 401);
+      finish('failed', response.status);
+      return response;
     }
     if (result.status === 'pending') {
-      console.warn('Razorpay verification pending', {orderId, paymentId, reason: 'payment_not_verified'});
-      return reply('pending', 202);
+      const response = reply('pending', 202);
+      finish('pending', response.status);
+      return response;
     }
     if (result.status === 'not_found') {
-      return reply('not_found', 400);
+      const response = reply('not_found', 400);
+      finish('not_found', response.status);
+      return response;
     }
 
     const response = reply('success');
@@ -51,13 +90,12 @@ export async function POST(request: Request) {
         maxAge: 24 * 60 * 60,
       });
     }
+    finish('success', response.status);
     return response;
-  } catch (error) {
-    console.error('Razorpay payment verification error', {
-      orderId,
-      paymentId,
-      reason: error instanceof Error ? error.message : 'unknown_error',
-    });
-    return reply('pending', 503);
+  } catch {
+    diagnostic('RAZORPAY_VERIFY_ERROR');
+    const response = reply('pending', 503);
+    finish('error', response.status);
+    return response;
   }
 }
