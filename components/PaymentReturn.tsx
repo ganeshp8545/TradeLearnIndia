@@ -53,7 +53,9 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				setStatus(responseStatus);
 				if (responseStatus === 'success') {
 					sessionStorage.removeItem('razorpay_payment_callback');
-					window.location.replace('/course-access');
+					// The verifier set the short-lived credential as an HttpOnly cookie.
+					// Exchange it for the access session before showing the course page.
+					window.location.replace('/api/course-access/verify');
 					return;
 				} else if (responseStatus === 'pending') {
 					retry();

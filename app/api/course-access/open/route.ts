@@ -36,14 +36,17 @@ export async function POST(request: Request) {
 		const cookieStore = await cookies();
 		const token = cookieStore.get('course_access_token')?.value;
 		const session = cookieStore.get('course_access_session')?.value;
-		const authorization = await getValidCourseAccessRecord(token, session);
-		if (!authorization) {
+		const tokenAuthorization = token ? await getValidCourseAccessRecord(token) : null;
+		const sessionAuthorization = !tokenAuthorization && session
+			? await getValidCourseAccessRecord(undefined, session)
+			: null;
+		if (!tokenAuthorization && !sessionAuthorization) {
 			return NextResponse.redirect(new URL('/course-access?state=invalid', request.url), 303);
 		}
 
-		const used = token
+		const used = tokenAuthorization && token
 			? await consumeAccessCredential('access_token_hash', 'access_token_expires_at', hashAccessToken(token))
-			: session
+			: sessionAuthorization && session
 				? await consumeAccessCredential('access_session_hash', 'access_session_expires_at', hashAccessToken(session))
 				: null;
 		if (!used) return NextResponse.redirect(new URL('/course-access?state=invalid', request.url), 303);
