@@ -53,6 +53,8 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				setStatus(responseStatus);
 				if (responseStatus === 'success') {
 					sessionStorage.removeItem('razorpay_payment_callback');
+					window.location.replace('/course-access');
+					return;
 				} else if (responseStatus === 'pending') {
 					retry();
 				}
