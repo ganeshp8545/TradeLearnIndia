@@ -1,6 +1,6 @@
 import {cookies} from 'next/headers';
 import {NextResponse} from 'next/server';
-import {consumeAccessCredential, getValidCourseAccessRecord, hashAccessToken} from '@/lib/course-access';
+import {createAccessToken, exchangeAccessTokenForSession, getValidCourseAccessRecord, hashAccessToken} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
@@ -44,16 +44,28 @@ export async function POST(request: Request) {
 			return NextResponse.redirect(new URL('/course-access?state=invalid', request.url), 303);
 		}
 
-		const used = tokenAuthorization && token
-			? await consumeAccessCredential('access_token_hash', 'access_token_expires_at', hashAccessToken(token))
-			: sessionAuthorization && session
-				? await consumeAccessCredential('access_session_hash', 'access_session_expires_at', hashAccessToken(session))
-				: null;
-		if (!used) return NextResponse.redirect(new URL('/course-access?state=invalid', request.url), 303);
+		// New payment and WhatsApp flows reach this route with a session already
+		// established. A session must survive the external Drive redirect so a
+		// browser can retry if that navigation does not complete. The raw token is
+		// still one-time: legacy raw-token requests are atomically exchanged here.
+		const rawToken = tokenAuthorization && token ? token : null;
+		const replacementSession = rawToken ? createAccessToken() : null;
+		if (replacementSession && rawToken) {
+			const exchanged = await exchangeAccessTokenForSession(hashAccessToken(rawToken), hashAccessToken(replacementSession));
+			if (!exchanged) return NextResponse.redirect(new URL('/course-access?state=invalid', request.url), 303);
+		}
 
 		const response = NextResponse.redirect(destination, 303);
-		response.cookies.set('course_access_token', '', {httpOnly: true, path: '/', maxAge: 0});
-		response.cookies.set('course_access_session', '', {httpOnly: true, path: '/', maxAge: 0});
+		if (replacementSession) {
+			response.cookies.set('course_access_token', '', {httpOnly: true, path: '/', maxAge: 0});
+			response.cookies.set('course_access_session', replacementSession, {
+				httpOnly: true,
+				secure: process.env.NODE_ENV === 'production',
+				sameSite: 'lax',
+				path: '/',
+				maxAge: 24 * 60 * 60,
+			});
+		}
 		return response;
 	} catch (error) {
 		console.error('Course access redirect failed', error);
