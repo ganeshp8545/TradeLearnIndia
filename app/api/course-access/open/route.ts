@@ -1,6 +1,6 @@
 import {cookies} from 'next/headers';
 import {NextResponse} from 'next/server';
-import {CourseAccessTimingEvent, createAccessToken, exchangeAccessTokenForSession, getValidCourseAccessRecord, hashAccessToken} from '@/lib/course-access';
+import {CourseAccessTimingEvent, createAccessToken, exchangeAccessTokenForSession, getCourseDriveUrl, getValidCourseAccessRecord, hashAccessToken} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 	const timing = ({operation, durationMs, success}: CourseAccessTimingEvent) => {
 		diagnostic('SUPABASE_OPERATION_END', {operation, durationMs, success});
 	};
-	const finish = (response: NextResponse, state: string, validationBranch: 'session' | 'raw-token' | 'invalid' | 'missing', redirectDestination: 'google-drive' | 'local' | 'none') => {
+	const finish = (response: NextResponse, state: string, validationBranch: 'session' | 'raw-token' | 'invalid' | 'missing', redirectDestination: 'interstitial' | 'local' | 'none') => {
 		diagnostic('OPEN_END', {
 			state,
 			validationBranch,
@@ -56,15 +56,10 @@ export async function POST(request: Request) {
 
 	try {
 		const redirectPreparationStartedAt = Date.now();
-		const driveUrl = process.env.COURSE_DRIVE_URL;
-		if (!driveUrl) throw new Error('Missing required environment variable: COURSE_DRIVE_URL');
-		const destination = new URL(driveUrl);
-		if (destination.protocol !== 'https:' || destination.hostname !== 'drive.google.com') {
-			throw new Error('COURSE_DRIVE_URL must be an HTTPS Google Drive URL');
-		}
+		getCourseDriveUrl();
 		diagnostic('REDIRECT_PREPARATION_END', {
 			durationMs: Date.now() - redirectPreparationStartedAt,
-			redirectDestination: 'google-drive',
+			redirectDestination: 'same-origin-interstitial',
 		});
 
 		const cookieStore = await cookies();
@@ -119,7 +114,7 @@ export async function POST(request: Request) {
 			}
 		}
 
-		const response = NextResponse.redirect(destination, 303);
+		const response = NextResponse.redirect(new URL('/course-access/redirect', request.url), 303);
 		if (replacementSession) {
 			response.cookies.set('course_access_token', '', {httpOnly: true, path: '/', maxAge: 0});
 			response.cookies.set('course_access_session', replacementSession, {
@@ -130,7 +125,7 @@ export async function POST(request: Request) {
 				maxAge: 24 * 60 * 60,
 			});
 		}
-		return finish(response, 'authorized', validationBranch, 'google-drive');
+		return finish(response, 'authorized', validationBranch, 'interstitial');
 	} catch {
 		diagnostic('OPEN_ERROR');
 		const response = NextResponse.redirect(new URL('/course-access?state=error', request.url), 303);

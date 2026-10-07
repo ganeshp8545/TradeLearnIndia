@@ -7,6 +7,16 @@ export const COURSE_SLUG = 'share-market-complete-course';
 export const COURSE_PRICE_INR = 1;
 export const TEST_COURSE_PRICE_INR = 1;
 
+export function getCourseDriveUrl(): URL {
+	const configuredUrl = process.env.COURSE_DRIVE_URL;
+	if (!configuredUrl) throw new Error('Missing required environment variable: COURSE_DRIVE_URL');
+	const destination = new URL(configuredUrl);
+	if (destination.protocol !== 'https:' || destination.hostname !== 'drive.google.com') {
+		throw new Error('COURSE_DRIVE_URL must be an HTTPS Google Drive URL');
+	}
+	return destination;
+}
+
 export function getCoursePricePaise(): number {
 	const testMode = process.env.COURSE_TEST_MODE;
 	if (testMode !== 'true' && testMode !== undefined && testMode !== 'false') {
