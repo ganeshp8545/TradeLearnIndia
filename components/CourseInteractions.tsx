@@ -2,10 +2,9 @@
 
 import {useEffect, useState} from 'react';
 import {CalendarDays} from 'lucide-react';
-import {RazorpayCheckoutButton} from '@/components/RazorpayCheckoutButton';
 import styles from './CourseLandingPage.module.css';
 
-export function StickyCourseCTA({label, originalPrice}: {label: string; originalPrice: string}) {
+export function StickyCourseCTA({label}: {label: string}) {
 	const [isVisible, setIsVisible] = useState(false);
 
 	useEffect(() => {
@@ -24,8 +23,8 @@ export function StickyCourseCTA({label, originalPrice}: {label: string; original
 	}, []);
 
 	return <div className={`${styles.stickyCta} ${isVisible ? styles.stickyCtaVisible : ''}`} aria-hidden={!isVisible}>
-		<span className={styles.stickyPrice}><span><s>{originalPrice}</s> {label.replace('Enroll Now – ', '')}</span></span>
-		<RazorpayCheckoutButton label={label} className="btn btn-gold"/>
+		<span className={styles.stickyPrice}><span>{label.replace('Enroll Now – ', '')}</span></span>
+		<a href="#enrol" className="btn btn-gold">{label}</a>
 	</div>;
 }
 

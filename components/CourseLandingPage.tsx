@@ -1,17 +1,15 @@
 import Image from 'next/image';
 import {
-	Activity, ArrowRight, BadgeCheck, Brain, BookOpen, Check, ChevronDown,
-	Clock3, CreditCard, FileText, Infinity as InfinityIcon, Languages, Laptop, Layers,
-	LockKeyhole, Mail, MessageCircle, MonitorPlay, Play, ShieldCheck,
-	Target, TrendingUp, Wallet,
+	ArrowRight, BadgeCheck, BookOpen, Check, ChevronDown, CreditCard, FileText,
+	LockKeyhole, Mail, MessageCircle, Play, ShieldCheck, Wallet,
 } from 'lucide-react';
 import {RazorpayCheckoutButton} from '@/components/RazorpayCheckoutButton';
 import {CourseCurriculum} from '@/components/CourseCurriculum';
 import {coursePageData as data, formatCoursePrice, getVisibleCurriculum, getVisibleGallery, getVisibleInstructor} from '@/lib/course-page-data';
 import {OfferCountdown, StickyCourseCTA} from '@/components/CourseInteractions';
 import styles from './CourseLandingPage.module.css';
+import {COURSE_VIDEO_COUNT} from '@/lib/course-pricing';
 
-const topicIcons = {book: BookOpen, chart: TrendingUp, activity: Activity, layers: Layers, target: Target, trending: TrendingUp, shield: ShieldCheck, brain: Brain, search: MonitorPlay};
 const visibleCurriculum = getVisibleCurriculum();
 const moduleCount = visibleCurriculum.length;
 const lessonCount = visibleCurriculum.reduce((count, module) => count + module.lessons.length, 0);
@@ -22,8 +20,8 @@ function SectionTitle({kicker, title, description}: {kicker: string; title: stri
 
 function PriceBlock({enrollLabel, compact = false, secureText = 'Secure checkout with Razorpay'}: {enrollLabel: string; compact?: boolean; secureText?: string}) {
 	return <div className={`${styles.priceBlock} ${compact ? styles.priceBlockCompact : ''}`}>
-		<p className={styles.originalPrice}>Regular price <s>{formatCoursePrice(data.pricing.originalPriceInr)}</s></p>
 		<p className={styles.currentPrice}>{formatCoursePrice(data.pricing.priceInr)}</p>
+		<p>11 Video Lessons | ₹499 | Lifetime Access</p>
 		{data.pricing.offerEndDate && <OfferCountdown endDate={data.pricing.offerEndDate}/>}
 		<div id={compact ? undefined : 'course-hero-enroll'}><RazorpayCheckoutButton label={enrollLabel} className="btn btn-gold w-full"/></div>
 		<p className={styles.secureNote}><LockKeyhole size={14} aria-hidden="true"/>{secureText}</p>
@@ -31,7 +29,7 @@ function PriceBlock({enrollLabel, compact = false, secureText = 'Secure checkout
 }
 
 function ChartPreview({title}: {title: string}) {
-	return <div className={styles.chartPreview} role="img" aria-label={`${title}, illustrative chart preview`}>
+	return <div className={styles.chartPreview} role="img" aria-label={`${title}, illustrative chart only; not a course preview`}>
 		<div className={styles.chartMeta}><span>ILLUSTRATIVE CHART</span><span className={styles.chartDot}/></div>
 		<svg viewBox="0 0 420 190" aria-hidden="true" className={styles.chartSvg}>
 			<path d="M0 35H420M0 80H420M0 125H420M0 170H420" className={styles.chartGrid}/>
@@ -54,22 +52,19 @@ export function CourseLandingPage({enrollLabel}: {enrollLabel: string}) {
 					<p className={styles.heroEyebrow}><span/> {data.hero.eyebrow}</p>
 					<h1>{data.hero.headline}</h1>
 					<p className={styles.heroLead}>{data.hero.subheadline}</p>
-					<ul className={styles.trustPoints}>{data.hero.trustPoints.map(point => <li key={point}><Check size={16} aria-hidden="true"/>{point}</li>)}</ul>
+					<ul className={styles.trustPoints}><li><Check size={16} aria-hidden="true"/>{COURSE_VIDEO_COUNT} pre-recorded video lessons</li><li><Check size={16} aria-hidden="true"/>Lifetime access — <a href="/terms">see Terms</a></li></ul>
 					<section className={styles.statsSection} aria-label="Course at a glance"><div className={styles.statsGrid}>
-						<Stat icon={Clock3} value={data.stats.videoHours} label="Video lessons"/>
 						<Stat icon={BookOpen} value={`${moduleCount} modules`} label="Structured curriculum"/>
-						<Stat icon={FileText} value={`${lessonCount} lessons`} label="Self-paced learning"/>
-						<Stat icon={Languages} value={data.stats.language} label="Course language"/>
-						<Stat icon={InfinityIcon} value={data.stats.access} label="Never expires"/>
-						<Stat icon={Laptop} value={data.stats.devices} label="Supported devices"/>
+						<Stat icon={FileText} value={`${lessonCount} videos`} label="Pre-recorded lessons"/>
+						<Stat icon={LockKeyhole} value="Verified payment" label="Required for course access"/>
 					</div></section>
 				</div>
-				<aside className={styles.heroAside} aria-label="Course price and preview">
-					<div className={styles.heroPrice}><PriceBlock enrollLabel={enrollLabel} secureText="Secure payment via Razorpay · UPI / Cards / Net Banking · Instant access"/></div>
+				<aside className={styles.heroAside} aria-label="Course price and illustrative chart">
+					<div className={styles.heroPrice}><PriceBlock enrollLabel={enrollLabel} secureText="Secure payment via Razorpay · UPI / Cards / Net Banking"/></div>
 					<div className={styles.heroMedia}>
 						{data.hero.videoUrl ? <iframe className={styles.videoFrame} src={data.hero.videoUrl} title={`${data.name} video preview`} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/> : <>
-							<ChartPreview title="Practical chart-based learning"/>
-							<div className={styles.previewCaption}><span className={styles.playMark}><Play size={16} fill="currentColor" aria-hidden="true"/></span><span><strong>Course preview</strong><small>Video preview coming soon</small></span></div>
+							<ChartPreview title="Illustrative chart example"/>
+							<div className={styles.previewCaption}><span className={styles.playMark}><Play size={16} fill="currentColor" aria-hidden="true"/></span><span><strong>Illustrative chart only</strong><small>No course video preview is currently available.</small></span></div>
 						</>}
 					</div>
 				</aside>
@@ -77,15 +72,14 @@ export function CourseLandingPage({enrollLabel}: {enrollLabel: string}) {
 		</section>
 
 		<section className={`section ${styles.section}`}><div className="container">
-			<SectionTitle kicker="A practical foundation" title="What you will learn" description="Build a clearer understanding of the market, charts and trading decisions with focused lessons across these topics."/>
-			<div className={styles.topicGrid}>{data.topics.map(topic => {
-				const Icon = topicIcons[topic.icon as keyof typeof topicIcons] ?? BookOpen;
-				return <article key={topic.title} className={styles.topicCard}><span className={styles.topicIcon}><Icon size={20} aria-hidden="true"/></span><h3>{topic.title}</h3><p>{topic.description}</p></article>;
-			})}</div>
+			<SectionTitle kicker="What you will learn" title="Topics covered in the course" description="The published curriculum covers these topics across 11 pre-recorded lessons."/>
+			<div className={styles.topicGrid}>{visibleCurriculum.map(module =>
+				<article key={module.title} className={styles.topicCard}><span className={styles.topicIcon}><BookOpen size={20} aria-hidden="true"/></span><h3>{module.title}</h3><p>{module.lessons.map(lesson => lesson.title).join(' · ')}</p></article>,
+			)}</div>
 		</div></section>
 
 		{visibleCurriculum.length > 0 && <section className={`section ${styles.sectionAlt}`}><div className="container">
-			<SectionTitle kicker="Inside the course" title="Course curriculum" description="Explore the learning path. Lessons marked as free preview are available to sample before enrolling."/>
+			<SectionTitle kicker="Inside the course" title="Complete 11-video curriculum" description={`${moduleCount} modules and ${lessonCount} pre-recorded video lessons. Lesson files are available after purchase.`}/>
 			<CourseCurriculum modules={visibleCurriculum}/>
 		</div></section>}
 
@@ -115,9 +109,13 @@ export function CourseLandingPage({enrollLabel}: {enrollLabel: string}) {
 
 		{data.testimonials.length > 0 && <section className={`section ${styles.section}`}><div className="container"><SectionTitle kicker="Learner feedback" title="What learners say"/><div className={styles.testimonialGrid}>{data.testimonials.map((item, index) => <figure key={`${item.name}-${index}`} className={styles.testimonial}><blockquote>“{item.quote}”</blockquote><figcaption><strong>{item.name}</strong><span>{item.detail}</span></figcaption></figure>)}</div></div></section>}
 
+		<section className={`section ${styles.sectionAlt}`}><div className="container">
+			<SectionTitle kicker="Course format and access" title="Learn at your own pace" description="The course contains 11 pre-recorded digital video lessons. Purchase includes lifetime access to this course, subject to the Terms. Secure access links and browser sessions expire; support can help you recover access."/>
+			<p><a href="/terms">Read the lifetime access terms</a> · <a href="/contact">Contact support</a></p>
+		</div></section>
 		<section className={`section ${styles.pricingSection}`} id="enrol"><div className={`container ${styles.pricingLayout}`}>
-			<div className={styles.pricingIntro}><p className={styles.kicker}>Learn at your own pace</p><h2>One course. A clearer learning path.</h2><p>Get lifetime access to a structured set of market lessons and practical chart explanations.</p><ul className={styles.includedList}>{data.includes.map(item => <li key={item}><Check size={17} aria-hidden="true"/>{item}</li>)}</ul><div className={styles.paymentMethods}><span><Wallet size={17} aria-hidden="true"/> UPI</span><span><CreditCard size={17} aria-hidden="true"/> Cards</span><span><LandmarkIcon/> Net Banking</span><span><Wallet size={17} aria-hidden="true"/> Wallets</span></div></div>
-			<div className={styles.pricingCard}><div className={styles.pricingCardHead}><span>Full course access</span><span className={styles.securePill}><LockKeyhole size={13} aria-hidden="true"/> Secure payment</span></div><PriceBlock enrollLabel={enrollLabel} compact/><p className={styles.instantNote}><Check size={16} aria-hidden="true"/> Instant access steps after successful payment</p><p className={styles.paymentProviders}>Payments processed securely by Razorpay</p></div>
+			<div className={styles.pricingIntro}><p className={styles.kicker}>Transparent pricing</p><h2>₹499 INR for the complete 11-video course.</h2><p>One payment. No course renewal fee. Course access begins after payment verification. <a href="/terms">Lifetime access — see Terms</a>.</p><ul className={styles.includedList}>{data.includes.map(item => <li key={item}><Check size={17} aria-hidden="true"/>{item}</li>)}</ul><div className={styles.paymentMethods}><span><Wallet size={17} aria-hidden="true"/> UPI</span><span><CreditCard size={17} aria-hidden="true"/> Cards</span><span><LandmarkIcon/> Net Banking</span><span><Wallet size={17} aria-hidden="true"/> Wallets</span></div></div>
+			<div className={styles.pricingCard}><div className={styles.pricingCardHead}><span>Full course access</span><span className={styles.securePill}><LockKeyhole size={13} aria-hidden="true"/> Secure payment</span></div><PriceBlock enrollLabel={enrollLabel} compact/><p className={styles.instantNote}><Check size={16} aria-hidden="true"/> Course-access instructions follow payment verification</p><p className={styles.paymentProviders}>Payments processed securely by Razorpay</p><p className={styles.paymentProviders}>Course page brand: {data.brand} · Payment merchant name: CampusEduX</p></div>
 		</div></section>
 
 		<section className={`section ${styles.section}`}><div className="container"><SectionTitle kicker="Simple to begin" title="How it works"/><div className={styles.stepsGrid}>{data.steps.map((step, index) => <article key={step.title} className={styles.stepCard}><span className={styles.stepNumber}>0{index + 1}</span><h3>{step.title}</h3><p>{step.description}</p></article>)}</div></div></section>
@@ -126,23 +124,23 @@ export function CourseLandingPage({enrollLabel}: {enrollLabel: string}) {
 
 		<section className={`section ${styles.sectionAlt}`}><div className="container">
 			<SectionTitle kicker="Clear terms" title="Refunds and course support" description="Please review the full policy before purchase. Our support team can help with course access and payment questions."/>
-			<div className={styles.policyGrid}><article className={styles.policyCard}><FileText size={22} aria-hidden="true"/><h3>Refund policy</h3><p>Refund eligibility and conditions are explained in the full policy.</p><a href={data.policies.refundUrl}>Read refund policy <ArrowRight size={15}/></a></article><article className={styles.policyCard}><MessageCircle size={22} aria-hidden="true"/><h3>Talk to support</h3><p>Available {data.support.hours} for payment and course-access help.</p><a href={`https://wa.me/${data.support.whatsappNumber}`} target="_blank" rel="noreferrer">WhatsApp support <ArrowRight size={15}/></a></article></div>
+			<div className={styles.policyGrid}><article className={styles.policyCard}><FileText size={22} aria-hidden="true"/><h3>Refund policy</h3><p>Purchases are generally non-refundable once valid course access has been provided. Applicable consumer rights remain available. Contact support about duplicate payments, failed payments or missing access.</p><a href={data.policies.refundUrl}>Read refund policy <ArrowRight size={15}/></a></article><article className={styles.policyCard}><MessageCircle size={22} aria-hidden="true"/><h3>Talk to support</h3><p>Contact support about payment and course-access questions before purchase.</p><a href={`https://wa.me/${data.support.whatsappNumber}`} target="_blank" rel="noreferrer">WhatsApp support <ArrowRight size={15}/></a></article></div>
 		</div></section>
 
 		<section className={`section ${styles.section}`}><div className="container">
 			<SectionTitle kicker="Questions, answered" title="Frequently asked questions"/>
 			<div className={styles.faqList}>{data.faqs.map((faq, index) => <details key={faq.question} className={styles.faqItem} open={index === 0}><summary>{faq.question}<ChevronDown size={18} aria-hidden="true"/></summary><p>{faq.answer}</p></details>)}</div>
-			<div className={styles.supportGrid}><a className={styles.supportCard} href={`https://wa.me/${data.support.whatsappNumber}?text=${encodeURIComponent(`Hi, I have a question about the ${data.name}.`)}`} target="_blank" rel="noreferrer"><span className={styles.supportIcon}><MessageCircle size={21} aria-hidden="true"/></span><span><strong>WhatsApp support</strong><small>{data.support.whatsappDisplay} · {data.support.hours}</small></span><ArrowRight size={17} aria-hidden="true"/></a><a className={styles.supportCard} href={`mailto:${data.support.email}?subject=${encodeURIComponent(`Question about ${data.name}`)}`}><span className={styles.supportIcon}><Mail size={21} aria-hidden="true"/></span><span><strong>Email support</strong><small>{data.support.email} · {data.support.hours}</small></span><ArrowRight size={17} aria-hidden="true"/></a></div>
+			<div className={styles.supportGrid}><a className={styles.supportCard} href={`https://wa.me/${data.support.whatsappNumber}?text=${encodeURIComponent(`Hi, I have a question about the ${data.name}.`)}`} target="_blank" rel="noreferrer"><span className={styles.supportIcon}><MessageCircle size={21} aria-hidden="true"/></span><span><strong>WhatsApp support</strong><small>{data.support.whatsappDisplay}</small></span><ArrowRight size={17} aria-hidden="true"/></a><a className={styles.supportCard} href={`mailto:${data.support.email}?subject=${encodeURIComponent(`Question about ${data.name}`)}`}><span className={styles.supportIcon}><Mail size={21} aria-hidden="true"/></span><span><strong>Email support</strong><small>{data.support.email}</small></span><ArrowRight size={17} aria-hidden="true"/></a></div>
 		</div></section>
 
-		<section className={styles.finalCta}><div className={`container ${styles.finalCtaInner}`}><div><p className={styles.kicker}>Your next step</p><h2>Build your market knowledge, one lesson at a time.</h2><p>Start the Share Market Complete Course with lifetime access.</p></div><RazorpayCheckoutButton label={enrollLabel} className="btn btn-gold"/></div></section>
+		<section className={styles.finalCta}><div className={`container ${styles.finalCtaInner}`}><div><p className={styles.kicker}>Your next step</p><h2>Enroll in the Share Market Educational Course</h2><p>11 pre-recorded video lessons · ₹499 INR · Lifetime access — see Terms.</p></div><RazorpayCheckoutButton label={enrollLabel} className="btn btn-gold"/></div></section>
 
-		<section className={styles.disclaimerSection}><div className={`container ${styles.disclaimer}`}><ShieldCheck size={22} aria-hidden="true"/><div><h2>Important risk disclaimer</h2><p>Course content is for educational purposes only and is not investment advice. Trading and investing involve risk, including possible loss of capital. No profit or return is guaranteed. TradeLearnIndia and CampusEduX are not SEBI-registered investment advisers. Please do your own research and consider your risk tolerance before making financial decisions.</p><nav aria-label="Legal links"><a href={data.policies.privacyUrl}>Privacy Policy</a><a href={data.policies.termsUrl}>Terms</a><a href={data.policies.refundUrl}>Refund Policy</a><a href={data.policies.contactUrl}>Contact</a><a href={`https://wa.me/${data.support.whatsappNumber}`} target="_blank" rel="noreferrer">WhatsApp</a><a href={`mailto:${data.support.email}`}>Email</a></nav></div></div></section>
-		<StickyCourseCTA label={enrollLabel} originalPrice={formatCoursePrice(data.pricing.originalPriceInr)}/>
+		<section className={styles.disclaimerSection}><div className={`container ${styles.disclaimer}`}><ShieldCheck size={22} aria-hidden="true"/><div><h2>Educational risk disclaimer</h2><p>This course is intended solely for educational purposes. It does not constitute personalized investment advice, stock recommendations, or guaranteed trading returns. Trading and investing involve financial risk, including possible loss of capital.</p><nav aria-label="Legal links"><a href={data.policies.privacyUrl}>Privacy Policy</a><a href={data.policies.termsUrl}>Terms &amp; Conditions</a><a href={data.policies.refundUrl}>Refund &amp; Cancellation Policy</a><a href={data.policies.contactUrl}>Contact Us</a><a href="/risk-disclaimer">Risk Disclaimer</a><a href={`https://wa.me/${data.support.whatsappNumber}`} target="_blank" rel="noreferrer">WhatsApp</a><a href={`mailto:${data.support.email}`}>Email</a></nav></div></div></section>
+		<StickyCourseCTA label={enrollLabel}/>
 	</main>;
 }
 
-function Stat({icon: Icon, value, label}: {icon: typeof Clock3; value: string; label: string}) {
+function Stat({icon: Icon, value, label}: {icon: typeof BookOpen; value: string; label: string}) {
 	return <div className={styles.stat}><Icon size={19} aria-hidden="true"/><strong>{value}</strong><span>{label}</span></div>;
 }
 

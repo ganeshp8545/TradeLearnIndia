@@ -1,6 +1,8 @@
 import {NextResponse} from 'next/server';
 import {randomUUID} from 'node:crypto';
-import {COURSE_SLUG, getCoursePricePaise, recordCoursePayment} from '@/lib/course-access';
+import {COURSE_SLUG, getCoursePricePaise, recordCoursePayment, isAllowedCourseOrigin} from '@/lib/course-access';
+
+import {limitCourseRequest} from '@/lib/course-request-security';
 
 export const runtime = 'nodejs';
 
@@ -10,8 +12,10 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!isAllowedCourseOrigin(request)) return NextResponse.json({error: 'Invalid request origin'}, {status: 403});
   try {
+    if (!await limitCourseRequest(request, 'checkout', 15, 3600)) return NextResponse.json({error: 'Too many checkout attempts. Please try again later.'}, {status: 429});
     const keyId = requiredEnv('RAZORPAY_KEY_ID');
     const keySecret = requiredEnv('RAZORPAY_KEY_SECRET');
     const amount = getCoursePricePaise();
@@ -33,6 +37,7 @@ export async function POST() {
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
     });
 
     const data = await response.json() as {id?: string; amount?: number; currency?: string; error?: {description?: string}};
@@ -57,8 +62,8 @@ export async function POST() {
       currency: 'INR',
       keyId,
     });
-  } catch (error) {
-    console.error('Razorpay order creation failed', error);
+  } catch {
+    console.error('Razorpay order creation unavailable');
     return NextResponse.json({error: 'Unable to create payment order.'}, {status: 500});
   }
 }

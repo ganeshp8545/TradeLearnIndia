@@ -34,14 +34,12 @@ export default function Courses() {
 		description,
 		url: courseUrl,
 		provider: {'@type': 'Organization', name: coursePageData.brand, url: siteUrl},
-		inLanguage: coursePageData.stats.language,
 		offers: {
 			'@type': 'Offer',
 			url: courseUrl,
 			priceCurrency: 'INR',
 			price: String(coursePageData.pricing.priceInr),
 			availability: 'https://schema.org/InStock',
-			priceSpecification: {'@type': 'PriceSpecification', priceCurrency: 'INR', price: String(coursePageData.pricing.originalPriceInr), priceType: 'https://schema.org/ListPrice'},
 		},
 	};
 	const faqSchema = {

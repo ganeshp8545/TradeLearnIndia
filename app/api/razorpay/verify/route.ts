@@ -1,5 +1,6 @@
+import {limitCourseRequest} from '@/lib/course-request-security';
 import {NextResponse} from 'next/server';
-import {CourseAccessTimingEvent, verifyAndGrantCourseAccess} from '@/lib/course-access';
+import {CourseAccessTimingEvent, verifyAndGrantCourseAccess, isAllowedCourseOrigin} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
@@ -23,6 +24,7 @@ function reply(status: string, httpStatus = 200) {
 }
 
 export async function POST(request: Request) {
+  if (!isAllowedCourseOrigin(request)) return reply('failed', 403);
   const startedAt = Date.now();
   const timing = ({operation, durationMs, success}: CourseAccessTimingEvent) => {
     diagnostic('DEPENDENCY_END', {
@@ -42,14 +44,15 @@ export async function POST(request: Request) {
   };
   diagnostic('RAZORPAY_VERIFY_START');
   try {
+    if (!await limitCourseRequest(request, 'payment-verify', 300, 3600)) return reply('pending', 429);
     const body = await request.json() as {
       razorpay_payment_id?: string;
       razorpay_order_id?: string;
       razorpay_signature?: string;
     };
-    const paymentId = body.razorpay_payment_id?.trim() ?? '';
-    const orderId = body.razorpay_order_id?.trim() ?? '';
-    const signature = body.razorpay_signature?.trim() ?? '';
+    const paymentId = typeof body?.razorpay_payment_id === 'string' ? body.razorpay_payment_id.trim() : '';
+    const orderId = typeof body?.razorpay_order_id === 'string' ? body.razorpay_order_id.trim() : '';
+    const signature = typeof body?.razorpay_signature === 'string' ? body.razorpay_signature.trim() : '';
 
     if (!paymentId || !orderId || !signature) {
       diagnostic('RAZORPAY_VERIFY_REJECTED', {state: 'missing_callback_fields'});
@@ -81,8 +84,8 @@ export async function POST(request: Request) {
     }
 
     const response = reply('success');
-    if (result.accessToken) {
-      response.cookies.set('course_access_token', result.accessToken, {
+    if (result.sessionToken) {
+      response.cookies.set('course_access_session', result.sessionToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',

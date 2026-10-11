@@ -1,9 +1,9 @@
 import 'server-only';
-import {createHash, randomBytes} from 'node:crypto';
-import {COURSE_NAME, COURSE_ORIGINAL_PRICE_INR, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_PRICE_SAVING_INR, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR} from '@/lib/course-pricing';
+import {createHash, createHmac, randomBytes} from 'node:crypto';
+import {COURSE_NAME, LEGACY_COURSE_NAME, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR} from '@/lib/course-pricing';
 import {verifyRazorpayOrderSignature} from '@/lib/razorpay-webhook';
 
-export {COURSE_NAME, COURSE_ORIGINAL_PRICE_INR, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_PRICE_SAVING_INR, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR};
+export {COURSE_NAME, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR};
 
 export function getCourseDriveUrl(): URL {
 	const configuredUrl = process.env.COURSE_DRIVE_URL;
@@ -55,6 +55,7 @@ export type CoursePayment = {
 	course_access_granted: boolean;
 	created_at: string;
 	updated_at?: string | null;
+	capture_verified_at?: string | null;
 	access_token_hash?: string | null;
 	access_token_expires_at?: string | null;
 	access_token_used_at?: string | null;
@@ -63,6 +64,7 @@ export type CoursePayment = {
 };
 
 type RazorpayOrder = {
+	receipt?: string;
 	id?: string;
 	amount?: number;
 	currency?: string;
@@ -79,6 +81,12 @@ type RazorpayPayment = {
 	contact?: string | null;
 	notes?: {course?: string};
 };
+
+function accessSecret(): string {
+    const secret = requiredEnv('COURSE_ACCESS_SECRET');
+    if (Buffer.byteLength(secret) < 32) throw new Error('COURSE_ACCESS_SECRET must contain at least 32 bytes');
+    return secret;
+}
 
 function requiredEnv(name: string): string {
 	const value = process.env[name];
@@ -108,6 +116,7 @@ async function supabaseRequest<T>(
 	const response = await fetch(`${baseUrl}/rest/v1/${path}`, {
 		...init,
 		cache: 'no-store',
+		signal: AbortSignal.timeout(10000),
 		headers: {
 			apikey: serviceKey,
 			Authorization: `Bearer ${serviceKey}`,
@@ -138,6 +147,7 @@ async function fetchRazorpay<T>(
 	const response = await fetch(`https://api.razorpay.com/v1/${resource}`, {
 		headers: {Authorization: `Basic ${credentials}`},
 		cache: 'no-store',
+		signal: AbortSignal.timeout(10000),
 	});
 	if (!response.ok) throw new Error(`Razorpay API request failed (${response.status}) for ${resource}`);
 	const result = await response.json() as T;
@@ -148,288 +158,161 @@ async function fetchRazorpay<T>(
 	}
 }
 
-export async function recordCoursePayment(payment: {
-	linkId?: string | null;
-	paymentId: string | null;
-	orderId: string | null;
-	name: string | null;
-	email: string | null;
-	amount: number;
-	currency: string;
-	status: PaymentStatus;
-	courseSlug?: string;
-}, timing?: CourseAccessTimingObserver): Promise<void> {
-	const payload = {
-		razorpay_payment_link_id: payment.linkId ?? null,
-		razorpay_payment_id: payment.paymentId ?? null,
-		razorpay_order_id: payment.orderId ?? null,
-		customer_name: payment.name,
-		customer_email: payment.email?.toLowerCase() ?? null,
-		amount: payment.amount,
-		currency: payment.currency,
-		payment_status: payment.status,
-		course_name: COURSE_NAME,
-		course_slug: payment.courseSlug ?? COURSE_SLUG,
-		course_access_granted: payment.status === 'success',
-		updated_at: new Date().toISOString(),
-	};
-	await supabaseRequest('rpc/record_course_payment', {
-		method: 'POST',
-		body: JSON.stringify({
-			p_payment_link_id: payload.razorpay_payment_link_id,
-			p_payment_id: payload.razorpay_payment_id,
-			p_order_id: payload.razorpay_order_id,
-			p_customer_name: payload.customer_name,
-			p_customer_email: payload.customer_email,
-			p_amount: payload.amount,
-			p_payment_status: payload.payment_status,
-			p_course_name: payload.course_name,
-			p_currency: payload.currency,
-			p_course_slug: payload.course_slug,
-		}),
-	}, timing, 'supabase_payment_record');
+async function rpc<T>(name: string, body: object, timing?: CourseAccessTimingObserver): Promise<T> {
+    return supabaseRequest<T>(`rpc/${name}`, {method: 'POST', body: JSON.stringify(body)}, timing, name);
 }
 
-export async function getPaymentByOrderId(orderId: string, timing?: CourseAccessTimingObserver, operation = 'supabase_payment_lookup'): Promise<CoursePayment | null> {
-	const query = new URLSearchParams({
-		select: '*',
-		razorpay_order_id: `eq.${orderId}`,
-		limit: '1',
-	});
-	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {}, timing, operation);
-	return rows[0] ?? null;
+type PaymentInput = {
+    paymentId: string | null; orderId: string | null; name: string | null; email: string | null;
+    amount: number; currency: string; status: PaymentStatus; courseSlug?: string;
+};
+
+async function persistPayment(payment: PaymentInput, captured: boolean, timing?: CourseAccessTimingObserver): Promise<CoursePayment | null> {
+    const rows = await rpc<CoursePayment[]>('record_course_payment_v2', {
+        p_order_id: payment.orderId, p_payment_id: payment.paymentId,
+        p_customer_name: payment.name, p_customer_email: payment.email,
+        p_amount: payment.amount, p_currency: payment.currency,
+        p_payment_status: payment.status, p_capture_verified: captured,
+    }, timing);
+    return rows[0] ?? null;
 }
 
-export async function getPaymentByPaymentId(paymentId: string): Promise<CoursePayment | null> {
-	const query = new URLSearchParams({
-		select: '*',
-		razorpay_payment_id: `eq.${paymentId}`,
-		limit: '1',
-	});
-	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`);
-	return rows[0] ?? null;
+// Success writes are private to reconciliation with the authenticated provider API.
+export async function recordCoursePayment(payment: Omit<PaymentInput, 'status'> & {status: 'pending' | 'failed'}): Promise<void> {
+    if (payment.status !== 'pending' && payment.status !== 'failed') throw new Error('Capture verification required');
+    await persistPayment(payment, false);
+}
+
+export async function getPaymentByOrderId(orderId: string, timing?: CourseAccessTimingObserver): Promise<CoursePayment | null> {
+    if (!/^order_[A-Za-z0-9]{1,100}$/.test(orderId)) return null;
+    const query = new URLSearchParams({select: '*', razorpay_order_id: `eq.${orderId}`, limit: '1'});
+    const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {}, timing);
+    return rows[0] ?? null;
+}
+
+function isCoursePurchase(payment: CoursePayment): boolean {
+    return (payment.course_name === COURSE_NAME || payment.course_name === LEGACY_COURSE_NAME)
+        && (payment.course_slug === COURSE_SLUG || payment.course_slug === null)
+        && (payment.currency === 'INR' || payment.currency === null)
+        && Number.isSafeInteger(payment.amount) && payment.amount > 0;
+}
+
+// The only path which records new capture evidence. Both callbacks and webhooks
+// use freshly fetched provider data, never a browser or event status field.
+export async function reconcileCoursePayment(orderId: string, paymentId: string, timing?: CourseAccessTimingObserver): Promise<CoursePayment | null> {
+    if (!/^order_[A-Za-z0-9]{1,100}$/.test(orderId) || !/^pay_[A-Za-z0-9]{1,100}$/.test(paymentId)) return null;
+    const stored = await getPaymentByOrderId(orderId, timing);
+    if (stored && !isCoursePurchase(stored)) return null;
+    const [order, payment] = await Promise.all([
+        fetchRazorpay<RazorpayOrder>(`orders/${orderId}`, timing, 'razorpay_order_lookup'),
+        fetchRazorpay<RazorpayPayment>(`payments/${paymentId}`, timing, 'razorpay_payment_lookup'),
+    ]);
+    // Historical successful purchases retain their recorded price. They still
+    // need exact provider amount/currency/identity/capture validation.
+    const historical = stored?.payment_status === 'success' && stored.course_access_granted;
+    const amount = historical ? stored.amount : getCoursePricePaise();
+    if (order.id !== orderId || order.amount !== amount || order.currency !== 'INR'
+        || (stored && stored.amount !== amount)
+        || (order.notes?.course !== COURSE_SLUG && !(historical && !order.notes?.course))
+        || (!stored && !order.receipt?.startsWith('course_'))
+        || payment.id !== paymentId || payment.order_id !== orderId
+        || payment.amount !== amount || payment.currency !== 'INR'
+        || (historical && stored.razorpay_payment_id !== paymentId)) return null;
+    if (payment.status === 'failed') {
+        await persistPayment({orderId, paymentId, name: null, email: null, amount, currency: 'INR', status: 'failed'}, false, timing);
+        return null;
+    }
+    if (payment.status !== 'captured') return null;
+    return persistPayment({orderId, paymentId, name: null, email: payment.email ?? null,
+        amount, currency: 'INR', status: 'success'}, true, timing);
+}
+
+export async function ensureCapturedPurchase(payment: CoursePayment, timing?: CourseAccessTimingObserver): Promise<CoursePayment | null> {
+    if (!isCoursePurchase(payment) || payment.payment_status !== 'success' || !payment.course_access_granted) return null;
+    if (payment.capture_verified_at) return payment;
+    if (!payment.razorpay_order_id || !payment.razorpay_payment_id) return null;
+    return reconcileCoursePayment(payment.razorpay_order_id, payment.razorpay_payment_id, timing);
+}
+
+export async function verifyAndGrantCourseAccess({orderId, paymentId, signature}: {
+    orderId: string; paymentId: string; signature: string;
+}, timing?: CourseAccessTimingObserver): Promise<{status: 'success' | 'pending' | 'failed' | 'not_found'; sessionToken?: string}> {
+    if (!/^order_[A-Za-z0-9]{1,100}$/.test(orderId) || !/^pay_[A-Za-z0-9]{1,100}$/.test(paymentId)) return {status: 'not_found'};
+    if (!verifyRazorpayOrderSignature(orderId, paymentId, signature, requiredEnv('RAZORPAY_KEY_SECRET'))) return {status: 'failed'};
+    const payment = await reconcileCoursePayment(orderId, paymentId, timing);
+    if (!payment?.capture_verified_at) return {status: 'pending'};
+    // Retries (including parallel callbacks and lost HTTP responses) produce the
+    // same session, without extending its original 24-hour expiry.
+    const sessionToken = createHmac('sha256', accessSecret())
+        .update(`checkout-session:v1:${orderId}:${paymentId}`).digest('base64url');
+    const issued = await rpc<boolean>('issue_course_credential', {
+        p_payment_id: payment.id, p_hash: hashAccessToken(sessionToken), p_kind: 'session', p_checkout: true,
+    }, timing);
+    return issued ? {status: 'success', sessionToken} : {status: 'not_found'};
 }
 
 export async function getPaymentByTokenHash(
-	column: 'access_token_hash' | 'access_session_hash',
-	tokenHash: string,
-	validityColumn: 'access_token_expires_at' | 'access_session_expires_at',
-	timing?: CourseAccessTimingObserver,
+    column: 'access_token_hash' | 'access_session_hash', tokenHash: string,
+    validityColumn: 'access_token_expires_at' | 'access_session_expires_at', timing?: CourseAccessTimingObserver,
 ): Promise<CoursePayment | null> {
-	const query = new URLSearchParams({
-		select: '*',
-		[column]: `eq.${tokenHash}`,
-		[validityColumn]: `gt.${new Date().toISOString()}`,
-		payment_status: 'eq.success',
-		course_access_granted: 'eq.true',
-		amount: `eq.${getCoursePricePaise()}`,
-		course_name: `eq.${COURSE_NAME}`,
-		limit: '1',
-	});
-	const operation = column === 'access_token_hash' ? 'supabase_raw_token_lookup' : 'supabase_session_lookup';
-	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {}, timing, operation);
-	return rows[0] ?? null;
+    if (!/^[a-f0-9]{64}$/.test(tokenHash)) return null;
+    const rows = await rpc<CoursePayment[]>('lookup_course_credential', {
+        p_hash: tokenHash, p_kind: column === 'access_session_hash' ? 'session' : 'recovery',
+    }, timing);
+    if (rows[0]) return ensureCapturedPurchase(rows[0], timing);
+    const query = new URLSearchParams({select: '*', [column]: `eq.${tokenHash}`,
+        [validityColumn]: `gt.${new Date().toISOString()}`, payment_status: 'eq.success', course_access_granted: 'eq.true', limit: '1'});
+    const legacy = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {}, timing);
+    return legacy[0] ? ensureCapturedPurchase(legacy[0], timing) : null;
 }
 
-export async function getValidCourseAccessRecord(
-	token?: string | null,
-	sessionToken?: string | null,
-	timing?: CourseAccessTimingObserver,
-): Promise<CoursePayment | null> {
-	if (token) {
-		const payment = await getPaymentByTokenHash('access_token_hash', hashAccessToken(token), 'access_token_expires_at', timing);
-		if (payment) return payment;
-	}
-	if (sessionToken) {
-		return await getPaymentByTokenHash('access_session_hash', hashAccessToken(sessionToken), 'access_session_expires_at', timing);
-	}
-	return null;
+export async function getValidCourseAccessRecord(token?: string | null, sessionToken?: string | null, timing?: CourseAccessTimingObserver): Promise<CoursePayment | null> {
+    if (sessionToken && /^[A-Za-z0-9_-]{32,128}$/.test(sessionToken)) {
+        const payment = await getPaymentByTokenHash('access_session_hash', hashAccessToken(sessionToken), 'access_session_expires_at', timing);
+        if (payment) return payment;
+    }
+    if (token && /^[A-Za-z0-9_-]{32,128}$/.test(token)) {
+        return getPaymentByTokenHash('access_token_hash', hashAccessToken(token), 'access_token_expires_at', timing);
+    }
+    return null;
 }
 
-export async function verifyAndGrantCourseAccess({
-	orderId,
-	paymentId,
-	signature,
-}: {
-	orderId: string;
-	paymentId: string;
-	signature: string;
-}, timing?: CourseAccessTimingObserver): Promise<{status: 'success' | 'pending' | 'failed' | 'not_found'; accessToken?: string; payment?: CoursePayment}> {
-	if (!orderId || !paymentId || !signature) {
-		return {status: 'not_found'};
-	}
-
-	const storedPayment = await getPaymentByOrderId(orderId, timing);
-	if (!storedPayment || storedPayment.razorpay_order_id !== orderId) {
-		return {status: 'pending'};
-	}
-
-	if (!verifyRazorpayOrderSignature(orderId, paymentId, signature, requiredEnv('RAZORPAY_KEY_SECRET'))) {
-		return {status: 'failed'};
-	}
-
-	const expectedAmount = getCoursePricePaise();
-	const [order, payment] = await Promise.all([
-		fetchRazorpay<RazorpayOrder>(`orders/${encodeURIComponent(orderId)}`, timing, 'razorpay_order_lookup'),
-		fetchRazorpay<RazorpayPayment>(`payments/${encodeURIComponent(paymentId)}`, timing, 'razorpay_payment_lookup'),
-	]);
-
-	const orderMatches = order.id === orderId
-		&& order.amount === expectedAmount
-		&& order.currency === 'INR'
-		&& (order.notes?.course ?? COURSE_SLUG) === COURSE_SLUG
-		&& storedPayment.amount === expectedAmount
-		&& storedPayment.currency === 'INR'
-		&& storedPayment.course_name === COURSE_NAME
-		&& storedPayment.course_slug === COURSE_SLUG;
-	const paymentMatches = payment.id === paymentId
-		&& payment.order_id === orderId
-		&& payment.amount === expectedAmount
-		&& payment.currency === 'INR'
-		&& (payment.status === 'captured' || payment.status === 'authorized');
-
-	if (!orderMatches || !paymentMatches) {
-		return {status: 'pending'};
-	}
-
-	await recordCoursePayment({
-		orderId,
-		paymentId,
-		name: payment.contact ?? null,
-		email: payment.email ?? null,
-		amount: payment.amount ?? expectedAmount,
-		currency: payment.currency ?? 'INR',
-		status: 'success',
-		courseSlug: COURSE_SLUG,
-	}, timing);
-
-	const finalPayment = await getPaymentByOrderId(orderId, timing, 'supabase_payment_lookup_after_record');
-	const accessToken = await grantCourseAccessToken(orderId, paymentId, timing);
-	if (!accessToken || !finalPayment) {
-		return {status: 'pending'};
-	}
-
-	return {status: 'success', accessToken, payment: finalPayment};
+export async function exchangeAccessTokenForSession(tokenHash: string, sessionHash: string, timing?: CourseAccessTimingObserver): Promise<CoursePayment | null> {
+    const purchase = await getPaymentByTokenHash('access_token_hash', tokenHash, 'access_token_expires_at', timing);
+    if (!purchase) return null;
+    const rows = await rpc<CoursePayment[]>('exchange_course_credential', {p_hash: tokenHash, p_session_hash: sessionHash}, timing);
+    return rows[0] ?? null;
 }
 
-export async function grantCourseAccessToken(orderId: string, paymentId: string, timing?: CourseAccessTimingObserver): Promise<string | null> {
-	const token = createAccessToken();
-	const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-	const query = new URLSearchParams({
-		select: 'id',
-		razorpay_order_id: `eq.${orderId}`,
-		razorpay_payment_id: `eq.${paymentId}`,
-		payment_status: 'eq.success',
-		course_access_granted: 'eq.true',
-		amount: `eq.${getCoursePricePaise()}`,
-		course_name: `eq.${COURSE_NAME}`,
-		and: `(or(access_token_hash.is.null,access_token_expires_at.lt.${new Date().toISOString()}))`,
-	});
-	const rows = await supabaseRequest<Array<{id: string}>>(`course_payments?${query}`, {
-		method: 'PATCH',
-		headers: {Prefer: 'return=representation'},
-		body: JSON.stringify({
-			access_token_hash: hashAccessToken(token),
-			access_token_expires_at: expiresAt,
-			access_token_used_at: null,
-			access_session_hash: null,
-			access_session_expires_at: null,
-		}),
-	}, timing, 'supabase_access_token_creation');
-	return rows.length ? token : null;
+export function isAllowedCourseOrigin(request: Request): boolean {
+    const configured = process.env.APP_BASE_URL;
+    if (!configured) return false;
+    try { return request.headers.get('origin') === new URL(configured).origin; } catch { return false; }
 }
 
-export async function consumeAccessCredential(
-	column: 'access_token_hash' | 'access_session_hash',
-	validityColumn: 'access_token_expires_at' | 'access_session_expires_at',
-	tokenHash: string,
-): Promise<CoursePayment | null> {
-	const query = new URLSearchParams({
-		select: '*',
-		[column]: `eq.${tokenHash}`,
-		[validityColumn]: `gt.${new Date().toISOString()}`,
-		payment_status: 'eq.success',
-		course_access_granted: 'eq.true',
-		amount: `eq.${getCoursePricePaise()}`,
-		course_name: `eq.${COURSE_NAME}`,
-	});
-	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {
-		method: 'PATCH',
-		headers: {Prefer: 'return=representation'},
-		body: JSON.stringify({
-			[column]: null,
-			[validityColumn]: null,
-			access_token_used_at: new Date().toISOString(),
-		}),
-	});
-	return rows[0] ?? null;
-}
-
-export async function exchangeAccessTokenForSession(
-	tokenHash: string,
-	sessionHash: string,
-	timing?: CourseAccessTimingObserver,
-): Promise<CoursePayment | null> {
-	const query = new URLSearchParams({
-		select: '*',
-		access_token_hash: `eq.${tokenHash}`,
-		access_token_expires_at: `gt.${new Date().toISOString()}`,
-		payment_status: 'eq.success',
-		course_access_granted: 'eq.true',
-		amount: `eq.${getCoursePricePaise()}`,
-		course_name: `eq.${COURSE_NAME}`,
-	});
-	const rows = await supabaseRequest<CoursePayment[]>(`course_payments?${query}`, {
-		method: 'PATCH',
-		headers: {Prefer: 'return=representation'},
-		body: JSON.stringify({
-			access_token_hash: null,
-			access_token_expires_at: null,
-			access_token_used_at: new Date().toISOString(),
-			access_session_hash: sessionHash,
-			access_session_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-		}),
-	}, timing, 'supabase_raw_token_exchange');
-	return rows[0] ?? null;
+export async function takeCourseRateLimit(scope: string, identity: string, limit: number, seconds: number): Promise<boolean> {
+    const key = createHmac('sha256', accessSecret()).update(`${scope}:${identity}`).digest('hex');
+    return rpc<boolean>('take_course_rate_limit', {p_key: key, p_limit: limit, p_seconds: seconds});
 }
 
 export async function sendCourseAccessEmail(payment: CoursePayment): Promise<void> {
-	if (!payment.customer_email) throw new Error('Payment record has no customer email');
-	const token = createAccessToken();
-	const tokenHash = hashAccessToken(token);
-	const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-	const query = new URLSearchParams({
-		id: `eq.${payment.id}`,
-		payment_status: 'eq.success',
-		course_access_granted: 'eq.true',
-	});
-	await supabaseRequest(`course_payments?${query}`, {
-		method: 'PATCH',
-		headers: {Prefer: 'return=minimal'},
-		body: JSON.stringify({
-			access_token_hash: tokenHash,
-			access_token_expires_at: expiresAt,
-			access_token_used_at: null,
-			access_session_hash: null,
-			access_session_expires_at: null,
-		}),
-	});
-
-	const appUrl = requiredEnv('APP_BASE_URL').replace(/\/$/, '');
-	const accessUrl = `${appUrl}/api/course-access/verify?token=${encodeURIComponent(token)}`;
-	const emailResponse = await fetch('https://api.resend.com/emails', {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${requiredEnv('RESEND_API_KEY')}`,
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			from: requiredEnv('COURSE_ACCESS_FROM_EMAIL'),
-			to: [payment.customer_email],
-			subject: 'Your Share Market Complete Course access',
-			text: `Your payment is verified. Open this secure link within 30 minutes to access your course: ${accessUrl}`,
-			html: `<p>Your payment is verified.</p><p><a href="${accessUrl}">Access your Share Market Complete Course</a></p><p>This secure link expires in 30 minutes and can only be used once.</p>`,
-		}),
-	});
-	if (!emailResponse.ok) throw new Error(`Course access email delivery failed (${emailResponse.status})`);
+    const verified = await ensureCapturedPurchase(payment);
+    if (!verified?.customer_email) return;
+    // Validate configuration before issuing; existing sessions and links are untouched.
+    const apiKey = requiredEnv('RESEND_API_KEY');
+    const from = requiredEnv('COURSE_ACCESS_FROM_EMAIL');
+    const appUrl = new URL(requiredEnv('APP_BASE_URL'));
+    if (appUrl.protocol !== 'https:' && process.env.NODE_ENV !== 'development') throw new Error('HTTPS recovery origin required');
+    const token = createAccessToken();
+    const issued = await rpc<boolean>('issue_course_credential', {p_payment_id: verified.id, p_hash: hashAccessToken(token), p_kind: 'recovery'});
+    if (!issued) throw new Error('Recovery credential unavailable');
+    // Fragment avoids putting the secret in HTTP request URLs and access logs.
+    const accessUrl = `${appUrl.origin}/course-access/recover#token=${token}`;
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST', signal: AbortSignal.timeout(10000),
+        headers: {Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json'},
+        body: JSON.stringify({from, to: [verified.customer_email], subject: 'Your course access recovery',
+            text: `Confirm course access using this single-use link within 30 minutes: ${accessUrl}\nIf you did not request it, ignore this email. Existing sessions are unaffected.`}),
+    });
+    if (!response.ok) throw new Error('Course access email delivery unavailable');
 }

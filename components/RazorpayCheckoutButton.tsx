@@ -1,7 +1,8 @@
 'use client';
 
-import {useState} from 'react';
+import {useEffect, useId, useRef, useState} from 'react';
 import {ArrowRight, LoaderCircle} from 'lucide-react';
+import {COURSE_NAME, COURSE_PRICE_PAISE} from '@/lib/course-pricing';
 
 declare global {
   interface Window {
@@ -29,24 +30,40 @@ declare global {
   }
 }
 
+let checkoutScript: Promise<void> | undefined;
+function ensureRazorpayScript(): Promise<void> {
+  if (window.Razorpay) return Promise.resolve();
+  if (checkoutScript) return checkoutScript;
+  checkoutScript = new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script');
+    const timeout = window.setTimeout(() => fail(), 15000);
+    function fail() {
+      window.clearTimeout(timeout);
+      script.remove(); checkoutScript = undefined;
+      reject(new Error('Checkout could not load. Check your connection and try again.'));
+    }
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => { window.clearTimeout(timeout); if (window.Razorpay) resolve(); else fail(); };
+    script.onerror = fail;
+    document.body.appendChild(script);
+  });
+  return checkoutScript;
+}
+
 export function RazorpayCheckoutButton({label, className = 'btn btn-primary w-full sm:w-auto'}: {label: string; className?: string}) {
   const [isLoading, setIsLoading] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  async function ensureRazorpayScript() {
-    if (typeof window === 'undefined') return;
-    if (window.Razorpay) return;
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay Checkout script.'));
-      document.body.appendChild(script);
-    });
-  }
+  const checkoutInProgress = useRef(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const acknowledgmentId = useId();
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
 
   async function handleCheckout() {
+    if (!acknowledged || checkoutInProgress.current) return;
+    checkoutInProgress.current = true;
     setError(null);
     setIsLoading(true);
     try {
@@ -57,7 +74,7 @@ export function RazorpayCheckoutButton({label, className = 'btn btn-primary w-fu
         body: JSON.stringify({}),
       });
       const data = await response.json() as {error?: string; orderId?: string; amount?: number; currency?: string; keyId?: string};
-      if (!response.ok || !data.orderId || !data.keyId || typeof data.amount !== 'number' || !Number.isInteger(data.amount) || data.currency !== 'INR') {
+      if (!response.ok || !data.orderId || !data.keyId || data.amount !== COURSE_PRICE_PAISE || data.currency !== 'INR') {
         throw new Error(data.error ?? 'Unable to create Razorpay order.');
       }
       if (!window.Razorpay) {
@@ -68,32 +85,49 @@ export function RazorpayCheckoutButton({label, className = 'btn btn-primary w-fu
         amount: data.amount,
         currency: data.currency,
         name: 'CampusEduX',
-        description: 'Share Market Complete Course',
+        description: COURSE_NAME,
         order_id: data.orderId,
         theme: {color: '#22c55e'},
         handler: (paymentResponse) => {
-          sessionStorage.setItem('razorpay_payment_callback', JSON.stringify(paymentResponse));
-          window.location.assign('/payment/return');
+          try {
+            sessionStorage.setItem('razorpay_payment_callback', JSON.stringify(paymentResponse));
+            window.location.assign('/payment/return');
+          } catch {
+            // Private browsing can disable storage. Verify once without storing
+            // credentials in a URL; recovery remains available after capture.
+            void fetch('/api/razorpay/verify', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(paymentResponse)})
+              .then(response => response.json()).then(result => {
+                if (result.status === 'success') window.location.assign('/course-access');
+                else throw new Error('Capture pending');
+              }).catch(() => setError(`Payment verification is pending. Do not pay again. Recover access from the course access page or contact support with order ${paymentResponse.razorpay_order_id}.`))
+              .finally(() => { checkoutInProgress.current = false; setIsLoading(false); });
+          }
         },
         modal: {
           ondismiss: () => {
+            checkoutInProgress.current = false;
             setIsLoading(false);
+            window.setTimeout(() => buttonRef.current?.focus(), 0);
           },
         },
       });
       razorpay.open();
     } catch (caughtError) {
+      checkoutInProgress.current = false;
+      setIsLoading(false);
       const message = caughtError instanceof Error ? caughtError.message : 'Payment could not be started.';
       setError(message);
-    } finally {
-      setIsLoading(false);
     }
   }
 
-  return <>
-    <button type="button" className={className} onClick={handleCheckout} disabled={isLoading}>
-      {isLoading ? <span className="inline-flex items-center gap-2"><LoaderCircle className="animate-spin" size={16}/>Processing...</span> : <span className="inline-flex items-center gap-2">{label}<ArrowRight size={16}/></span>}
+  return <div className="w-full min-w-0 max-w-xl" aria-busy={isLoading}>
+    <div className="mb-3 text-sm leading-6"><strong>{COURSE_NAME}</strong><br/>11 Pre-recorded Videos<br/>Total Payable: ₹499 INR<br/>Lifetime Access — <a className="text-inherit underline underline-offset-2" href="/terms">See Terms</a><p>Purchases are generally non-refundable once valid course access has been provided, subject to applicable consumer rights. <a className="text-inherit underline underline-offset-2" href="/refund-policy">Read the Refund &amp; Cancellation Policy</a>.</p></div>
+    <div className="mb-3 flex items-start gap-2 text-sm"><input aria-describedby={`${acknowledgmentId}-hint`} disabled={isLoading} id={acknowledgmentId} type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} className="mt-1 h-5 w-5 shrink-0"/><label htmlFor={acknowledgmentId}>I have read the Terms &amp; Conditions and Refund &amp; Cancellation Policy linked above.</label></div>
+    <p id={`${acknowledgmentId}-hint`} className="mb-3 text-sm">Select the acknowledgment above to enable checkout.</p>
+    <button ref={buttonRef} aria-describedby={`${acknowledgmentId}-hint`} type="button" className={`${className} disabled:cursor-not-allowed disabled:opacity-60`} onClick={handleCheckout} disabled={isLoading || !acknowledged}>
+      {isLoading ? <span className="inline-flex items-center gap-2"><LoaderCircle aria-hidden="true" className="animate-spin" size={16}/>Processing...</span> : <span className="inline-flex items-center gap-2">{label}<ArrowRight aria-hidden="true" size={16}/></span>}
     </button>
-    {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
-  </>;
+    <span role="status" className="sr-only">{isLoading ? 'Opening secure checkout. Please wait.' : ''}</span>
+    {error && <p ref={errorRef} tabIndex={-1} role="alert" className="mt-3 rounded bg-white p-3 text-sm font-medium text-red-800">{error} <a className="underline" href="/course-access#recover">Recover access</a></p>}
+  </div>;
 }

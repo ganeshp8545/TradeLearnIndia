@@ -1,5 +1,6 @@
+import {limitCourseRequest} from '@/lib/course-request-security';
 import {NextResponse} from 'next/server';
-import {verifyAndGrantCourseAccess} from '@/lib/course-access';
+import {verifyAndGrantCourseAccess, isAllowedCourseOrigin} from '@/lib/course-access';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +12,9 @@ function reply(status: string, httpStatus = 200) {
 }
 
 export async function POST(request: Request) {
+  if (!isAllowedCourseOrigin(request)) return reply('failed', 403);
   try {
+    if (!await limitCourseRequest(request, 'payment-verify', 300, 3600)) return reply('pending', 429);
     const body = await request.json() as Record<string, unknown>;
     const orderId = typeof body.razorpay_order_id === 'string' ? body.razorpay_order_id : '';
     const paymentId = typeof body.razorpay_payment_id === 'string' ? body.razorpay_payment_id : '';
@@ -24,8 +27,8 @@ export async function POST(request: Request) {
     if (result.status === 'pending' || result.status === 'not_found') return reply(result.status === 'pending' ? 'pending' : 'not_found', result.status === 'pending' ? 202 : 400);
 
     const response = reply('success');
-    if (result.accessToken) {
-      response.cookies.set('course_access_token', result.accessToken, {
+    if (result.sessionToken) {
+      response.cookies.set('course_access_session', result.sessionToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -34,8 +37,8 @@ export async function POST(request: Request) {
       });
     }
     return response;
-  } catch (error) {
-    console.error('Course callback verification failed', error);
+  } catch {
+    console.error('Course callback verification unavailable');
     return reply('pending', 503);
   }
 }

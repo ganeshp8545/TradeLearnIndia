@@ -1,4 +1,4 @@
-import {COURSE_ORIGINAL_PRICE_INR, COURSE_PRICE_INR, COURSE_PRICE_SAVING_INR, formatINR} from '@/lib/course-pricing';
+import {COURSE_NAME, COURSE_PRICE_INR, COURSE_VIDEO_COUNT, formatINR} from '@/lib/course-pricing';
 
 export const showPlaceholders = false;
 
@@ -35,44 +35,22 @@ export function getVisibleInstructor() {
 // The live checkout amount stays canonical in course-access.ts and is referenced here.
 export const coursePageData = {
 	brand: 'TradeLearnIndia by CampusEduX',
-	name: 'Share Market Complete Course',
+	name: COURSE_NAME,
 	seo: {
-		title: 'Share Market Complete Course | TradeLearnIndia by CampusEduX',
-		description: 'Learn share market fundamentals, technical analysis, price action, trading strategies and risk management with structured, practical lessons.',
-		keywords: ['share market course online', 'stock market course for beginners', 'technical analysis course', 'price action trading course', 'trading course India'],
+		title: 'Share Market Educational Course | TradeLearnIndia',
+		description: 'Explore 11 structured share market educational video lessons. Course fee ₹499. Review the curriculum, lifetime access terms, and refund policy before enrolling.',
+		keywords: ['share market course online', 'price action course', 'swing trading course', 'support and resistance lessons', 'market strategy course India'],
 	},
 	hero: {
-		eyebrow: 'A structured learning path',
-		headline: 'Understand the market. Build your own process.',
-		subheadline: 'A practical share market course: market basics, chart analysis, trading concepts and risk management, one clear lesson at a time.',
-		trustPoints: ['Beginner to Advanced', 'Practical chart-based'],
+		eyebrow: 'TradeLearnIndia by CampusEduX',
+		headline: COURSE_NAME,
+		subheadline: `Explore share market concepts through ${COURSE_VIDEO_COUNT} structured educational video lessons. Review the complete curriculum, access terms, and refund policy before enrolling.`,
 		videoUrl: '', // Add an embeddable video URL when the course preview is ready.
 	},
 	pricing: {
 		priceInr: COURSE_PRICE_INR,
-		originalPriceInr: COURSE_ORIGINAL_PRICE_INR,
-		savingInr: COURSE_PRICE_SAVING_INR,
 		offerEndDate: null as string | null, // ISO date/time; leave null without a real deadline.
 	},
-	stats: {
-		videoHours: '13+ hours',
-		language: 'Hindi',
-		access: 'Lifetime access',
-		devices: 'Mobile + laptop',
-	},
-	topics: [
-		{title: 'Share Market Basics', description: 'Learn how shares, exchanges and market participants fit together.', icon: 'book'},
-		{title: 'Technical Analysis', description: 'Read price charts and understand commonly used indicators.', icon: 'chart'},
-		{title: 'Price Action', description: 'Study price movement, candles and market structure.', icon: 'activity'},
-		{title: 'Support & Resistance', description: 'Identify areas where price has reacted before.', icon: 'layers'},
-		{title: 'Trading Strategies', description: 'Explore repeatable frameworks for planning a trade.', icon: 'target'},
-		{title: 'Bank Nifty Strategies', description: 'Understand index behaviour and strategy concepts.', icon: 'trending'},
-		{title: 'Swing Trading', description: 'Learn the basics of holding trades across multiple sessions.', icon: 'chart'},
-		{title: 'Intraday Concepts', description: 'Understand the structure and risks of intraday trading.', icon: 'activity'},
-		{title: 'Risk & Money Management', description: 'Plan position risk and protect your capital.', icon: 'shield'},
-		{title: 'Trading Psychology', description: 'Recognise habits that can affect trading decisions.', icon: 'brain'},
-		{title: 'Practical Chart Analysis', description: 'Apply course concepts to illustrative market charts.', icon: 'search'},
-	],
 	curriculum: [
 		{title: 'Price Action and Support and Resistance', lessons: [
 			{title: 'Support and Resistance'},
@@ -106,8 +84,8 @@ export const coursePageData = {
 		bio: 'Replace this placeholder with a short, factual instructor biography and teaching approach.',
 	},
 	audience: {
-		for: ['New learners who want a structured introduction to the share market.', 'Learners who want to understand charts and common trading concepts.', 'Self-paced learners who can study from a mobile or laptop.'],
-		notFor: ['Anyone looking for guaranteed profits or sure-shot calls.', 'Anyone expecting personal investment advice or managed trades.', 'Anyone unwilling to learn risk management before trading.'],
+		for: ['Learners interested in the price-action, swing-trading and strategy topics listed in the course outline.', 'People who want to review the lesson titles before deciding whether the course suits their needs.'],
+		notFor: ['Anyone seeking assured trading outcomes or stock tips.', 'Anyone expecting personal investment advice or managed trades.'],
 	},
 	gallery: [
 		{title: 'Chart example 01', description: 'Replace with a real course screenshot or chart walkthrough.', image: ''},
@@ -116,7 +94,7 @@ export const coursePageData = {
 	],
 	testimonials: [] as {name: string; detail: string; quote: string}[],
 	bonuses: [] as {title: string; description: string}[],
-	includes: ['13+ hours of recorded video lessons', 'Beginner-to-advanced learning sequence', 'Practical chart-based explanations', 'Self-paced learning on mobile and laptop', 'Lifetime access to course materials'],
+	includes: [`${COURSE_VIDEO_COUNT} pre-recorded video lessons`, 'Lifetime access to this course — see Terms', 'Course-access flow after payment verification'],
 	steps: [
 		{title: 'Pay', description: 'Complete checkout securely using Razorpay.'},
 		{title: 'Get access', description: 'Follow the on-screen course-access steps after payment.'},
@@ -127,16 +105,14 @@ export const coursePageData = {
 		whatsappNumber: '919370764290',
 		whatsappDisplay: '+91 93707 64290',
 		email: 'campusedux@gmail.com',
-		hours: '10 AM–7 PM',
 	},
 	faqs: [
-		{question: 'How long can I access the course?', answer: 'The course includes lifetime access to the course materials, subject to the access terms shown during enrolment.'},
-		{question: 'What language is the course in?', answer: 'The current course language is Hindi.'},
-		{question: 'Can I learn on my phone?', answer: 'Yes. You can access the lessons on a compatible mobile phone or laptop with an internet connection.'},
+		{question: 'How long can I access the course?', answer: 'Your purchase includes lifetime access to this course, subject to the Terms. A secure access link or browser session can expire; contact support to recover access.'},
+		{question: 'How do I access the course?', answer: 'After payment verification, use the course-access button to open the configured Google Drive destination. Device compatibility and file availability depend on the Drive sharing settings and course files.'},
 		{question: 'My payment failed or access did not open. What should I do?', answer: 'Check your payment status first. If money was debited or access is still unavailable, contact support with your payment reference so the team can help.'},
-		{question: 'Will I receive a certificate?', answer: 'Certificate availability is not currently confirmed. Contact support before enrolling if a certificate is important to you.'},
-		{question: 'What is the refund policy?', answer: 'Please read the full refund policy before purchase. Refund eligibility is governed by that policy.'},
-		{question: 'When is support available?', answer: 'Course support is available between 10 AM and 7 PM. Response time may vary.'},
+		{question: 'Will I receive a certificate?', answer: 'Certificate availability has not been verified. Please contact support if this matters to you.'},
+		{question: 'What is the refund policy?', answer: 'Purchases are generally non-refundable once valid course access has been provided, subject to applicable consumer rights. Review the full policy before purchase.'},
+		{question: 'How can I contact support?', answer: 'Contact support by email or WhatsApp using the details on this page.'},
 	],
 };
 

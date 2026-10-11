@@ -49,13 +49,12 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				});
 				const result = await response.json() as {status?: ViewStatus; error?: string};
 				if (!active) return;
-				const responseStatus = result.status ?? (response.ok ? 'success' : 'failed');
+				const responseStatus = result.status ?? 'server_error';
 				setStatus(responseStatus);
 				if (responseStatus === 'success') {
-					sessionStorage.removeItem('razorpay_payment_callback');
-					// The verifier set the short-lived credential as an HttpOnly cookie.
-					// Exchange it for the access session before showing the course page.
-					window.location.replace('/api/course-access/verify');
+					try { sessionStorage.removeItem('razorpay_payment_callback'); } catch { /* Cookies still permit access. */ }
+					// The verifier set a captured-purchase session as an HttpOnly cookie.
+					window.location.replace('/course-access');
 					return;
 				} else if (responseStatus === 'pending') {
 					retry();
@@ -77,7 +76,7 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				: status === 'server_error' ? 'Verification temporarily unavailable'
 					: status === 'loading' ? 'Processing Payment...'
 						: 'Payment verification pending';
-	const description = status === 'success' ? 'Your Share Market Complete Course purchase has been confirmed.'
+	const description = status === 'success' ? 'Your Share Market Educational Course purchase has been confirmed.'
 		: status === 'failed' ? 'Payment was not completed.'
 			: status === 'not_found' ? 'We could not verify a valid Razorpay checkout response for this payment.'
 				: status === 'server_error' ? 'We could not check payment status right now. Please refresh this page shortly.'
@@ -86,7 +85,7 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 
 	return <main className="min-h-[calc(100dvh-64px)] bg-slate-50 px-4 py-10 text-slate-900 sm:py-12">
 		<div className="mx-auto max-w-xl">
-			<a href="/courses/share-market-complete-course" className="text-sm font-bold text-green-800">TradeLearnIndia</a>
+			<a href="/courses" className="text-sm font-bold text-green-800">TradeLearnIndia</a>
 			<section aria-live="polite" className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 				{status === 'loading' || status === 'pending'
 					? <LoaderCircle className="mb-5 animate-spin text-green-700" aria-label="Checking payment" size={30}/>
@@ -96,11 +95,12 @@ export function PaymentReturn({callback}: {callback: Callback}) {
 				<h1 className="text-3xl font-black">{title}</h1>
 				<p className="muted mt-3 leading-7">{description}</p>
 				{status === 'success' && <>
-					<p className="mt-4 font-bold">Share Market Complete Course</p>
+					<p className="mt-4 font-bold">Share Market Educational Course</p>
 					<p className="muted mt-3 text-sm leading-6">Your payment has been successfully verified. Your course access is ready.</p>
 					<a href="/course-access" className="btn btn-primary mt-6 w-full sm:w-auto">ACCESS COURSE</a>
 				</>}
-				<a href="/courses/share-market-complete-course" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft size={16}/> Return to course page</a>
+				<p className="mt-4 text-sm"><a className="underline" href="/course-access#recover">Already paid? Recover course access</a>. Do not pay again while verification is pending.</p>
+				<a href="/courses" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft size={16}/> Return to course page</a>
 			</section>
 		</div>
 	</main>;
