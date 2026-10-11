@@ -32,13 +32,13 @@ export function getVisibleInstructor() {
 }
 
 // This sales-page data is the editing surface for copy and course details.
-// The live checkout amount stays canonical in course-access.ts and is referenced here.
+// Public copy and server checkout derive the price from course-pricing.ts.
 export const coursePageData = {
 	brand: 'TradeLearnIndia by CampusEduX',
 	name: COURSE_NAME,
 	seo: {
 		title: 'Share Market Educational Course | TradeLearnIndia',
-		description: 'Explore 11 structured share market educational video lessons. Course fee ₹499. Review the curriculum, lifetime access terms, and refund policy before enrolling.',
+		description: `Explore ${COURSE_VIDEO_COUNT} structured share market educational video lessons. Course fee ${formatINR(COURSE_PRICE_INR)}. Review the curriculum, lifetime access terms, and refund policy before enrolling.`,
 		keywords: ['share market course online', 'price action course', 'swing trading course', 'support and resistance lessons', 'market strategy course India'],
 	},
 	hero: {
@@ -49,7 +49,6 @@ export const coursePageData = {
 	},
 	pricing: {
 		priceInr: COURSE_PRICE_INR,
-		offerEndDate: null as string | null, // ISO date/time; leave null without a real deadline.
 	},
 	curriculum: [
 		{title: 'Price Action and Support and Resistance', lessons: [

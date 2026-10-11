@@ -6,7 +6,7 @@ import {
 import {RazorpayCheckoutButton} from '@/components/RazorpayCheckoutButton';
 import {CourseCurriculum} from '@/components/CourseCurriculum';
 import {coursePageData as data, formatCoursePrice, getVisibleCurriculum, getVisibleGallery, getVisibleInstructor} from '@/lib/course-page-data';
-import {OfferCountdown, StickyCourseCTA} from '@/components/CourseInteractions';
+import {StickyCourseCTA} from '@/components/CourseInteractions';
 import styles from './CourseLandingPage.module.css';
 import {COURSE_VIDEO_COUNT} from '@/lib/course-pricing';
 
@@ -21,8 +21,7 @@ function SectionTitle({kicker, title, description}: {kicker: string; title: stri
 function PriceBlock({enrollLabel, compact = false, secureText = 'Secure checkout with Razorpay'}: {enrollLabel: string; compact?: boolean; secureText?: string}) {
 	return <div className={`${styles.priceBlock} ${compact ? styles.priceBlockCompact : ''}`}>
 		<p className={styles.currentPrice}>{formatCoursePrice(data.pricing.priceInr)}</p>
-		<p>11 Video Lessons | ₹499 | Lifetime Access</p>
-		{data.pricing.offerEndDate && <OfferCountdown endDate={data.pricing.offerEndDate}/>}
+		<p className={styles.priceCaption}>One payment · {COURSE_VIDEO_COUNT} pre-recorded videos</p>
 		<div id={compact ? undefined : 'course-hero-enroll'}><RazorpayCheckoutButton label={enrollLabel} className="btn btn-gold w-full"/></div>
 		<p className={styles.secureNote}><LockKeyhole size={14} aria-hidden="true"/>{secureText}</p>
 	</div>;
@@ -114,8 +113,8 @@ export function CourseLandingPage({enrollLabel}: {enrollLabel: string}) {
 			<p><a href="/terms">Read the lifetime access terms</a> · <a href="/contact">Contact support</a></p>
 		</div></section>
 		<section className={`section ${styles.pricingSection}`} id="enrol"><div className={`container ${styles.pricingLayout}`}>
-			<div className={styles.pricingIntro}><p className={styles.kicker}>Transparent pricing</p><h2>₹499 INR for the complete 11-video course.</h2><p>One payment. No course renewal fee. Course access begins after payment verification. <a href="/terms">Lifetime access — see Terms</a>.</p><ul className={styles.includedList}>{data.includes.map(item => <li key={item}><Check size={17} aria-hidden="true"/>{item}</li>)}</ul><div className={styles.paymentMethods}><span><Wallet size={17} aria-hidden="true"/> UPI</span><span><CreditCard size={17} aria-hidden="true"/> Cards</span><span><LandmarkIcon/> Net Banking</span><span><Wallet size={17} aria-hidden="true"/> Wallets</span></div></div>
-			<div className={styles.pricingCard}><div className={styles.pricingCardHead}><span>Full course access</span><span className={styles.securePill}><LockKeyhole size={13} aria-hidden="true"/> Secure payment</span></div><PriceBlock enrollLabel={enrollLabel} compact/><p className={styles.instantNote}><Check size={16} aria-hidden="true"/> Course-access instructions follow payment verification</p><p className={styles.paymentProviders}>Payments processed securely by Razorpay</p><p className={styles.paymentProviders}>Course page brand: {data.brand} · Payment merchant name: CampusEduX</p></div>
+			<div className={styles.pricingIntro}><p className={styles.kicker}>Transparent pricing</p><h2>{formatCoursePrice(data.pricing.priceInr)} INR for the complete {COURSE_VIDEO_COUNT}-video course.</h2><p>One payment. No course renewal fee. Course access begins after payment verification. <a href="/terms">Lifetime access — see Terms</a>.</p><ul className={styles.includedList}>{data.includes.map(item => <li key={item}><Check size={17} aria-hidden="true"/>{item}</li>)}</ul><div className={styles.paymentMethods}><span><Wallet size={17} aria-hidden="true"/> UPI</span><span><CreditCard size={17} aria-hidden="true"/> Cards</span><span><LandmarkIcon/> Net Banking</span><span><Wallet size={17} aria-hidden="true"/> Wallets</span></div></div>
+			<div className={styles.pricingCard}><div className={styles.pricingCardHead}><span>Full course access</span><span className={styles.securePill}><LockKeyhole size={13} aria-hidden="true"/> Secure payment</span></div><PriceBlock enrollLabel={enrollLabel} compact/><p className={styles.instantNote}><Check size={16} aria-hidden="true"/> Access follows verified payment capture</p><p className={styles.paymentProviders}>Payments processed by Razorpay for CampusEduX</p></div>
 		</div></section>
 
 		<section className={`section ${styles.section}`}><div className="container"><SectionTitle kicker="Simple to begin" title="How it works"/><div className={styles.stepsGrid}>{data.steps.map((step, index) => <article key={step.title} className={styles.stepCard}><span className={styles.stepNumber}>0{index + 1}</span><h3>{step.title}</h3><p>{step.description}</p></article>)}</div></div></section>
@@ -133,7 +132,7 @@ export function CourseLandingPage({enrollLabel}: {enrollLabel: string}) {
 			<div className={styles.supportGrid}><a className={styles.supportCard} href={`https://wa.me/${data.support.whatsappNumber}?text=${encodeURIComponent(`Hi, I have a question about the ${data.name}.`)}`} target="_blank" rel="noreferrer"><span className={styles.supportIcon}><MessageCircle size={21} aria-hidden="true"/></span><span><strong>WhatsApp support</strong><small>{data.support.whatsappDisplay}</small></span><ArrowRight size={17} aria-hidden="true"/></a><a className={styles.supportCard} href={`mailto:${data.support.email}?subject=${encodeURIComponent(`Question about ${data.name}`)}`}><span className={styles.supportIcon}><Mail size={21} aria-hidden="true"/></span><span><strong>Email support</strong><small>{data.support.email}</small></span><ArrowRight size={17} aria-hidden="true"/></a></div>
 		</div></section>
 
-		<section className={styles.finalCta}><div className={`container ${styles.finalCtaInner}`}><div><p className={styles.kicker}>Your next step</p><h2>Enroll in the Share Market Educational Course</h2><p>11 pre-recorded video lessons · ₹499 INR · Lifetime access — see Terms.</p></div><RazorpayCheckoutButton label={enrollLabel} className="btn btn-gold"/></div></section>
+		<section className={styles.finalCta}><div className={`container ${styles.finalCtaInner}`}><div><p className={styles.kicker}>Your next step</p><h2>Enroll in the Share Market Educational Course</h2><p>{COURSE_VIDEO_COUNT} pre-recorded video lessons · {formatCoursePrice(data.pricing.priceInr)} INR · Lifetime access — see Terms.</p></div><RazorpayCheckoutButton label={enrollLabel} className="btn btn-gold"/></div></section>
 
 		<section className={styles.disclaimerSection}><div className={`container ${styles.disclaimer}`}><ShieldCheck size={22} aria-hidden="true"/><div><h2>Educational risk disclaimer</h2><p>This course is intended solely for educational purposes. It does not constitute personalized investment advice, stock recommendations, or guaranteed trading returns. Trading and investing involve financial risk, including possible loss of capital.</p><nav aria-label="Legal links"><a href={data.policies.privacyUrl}>Privacy Policy</a><a href={data.policies.termsUrl}>Terms &amp; Conditions</a><a href={data.policies.refundUrl}>Refund &amp; Cancellation Policy</a><a href={data.policies.contactUrl}>Contact Us</a><a href="/risk-disclaimer">Risk Disclaimer</a><a href={`https://wa.me/${data.support.whatsappNumber}`} target="_blank" rel="noreferrer">WhatsApp</a><a href={`mailto:${data.support.email}`}>Email</a></nav></div></div></section>
 		<StickyCourseCTA label={enrollLabel}/>

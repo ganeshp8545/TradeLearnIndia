@@ -1,24 +1,40 @@
-.coursePage { --course-navy: #0b1f33; --course-ink: #152a3c; --course-green: #15845b; --course-gold: #e4bc4b; --course-muted: #627285; --course-line: #dce5e9; color: var(--course-ink); }
-.hero { overflow: hidden; background: #0b1f33; color: white; padding: 30px 0 34px; }
-.heroGrid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(310px, .92fr); align-items: start; gap: clamp(28px, 5vw, 68px); }
+.coursePage { --course-navy: #0b1f33; --course-ink: #152a3c; --course-green: #15845b; --course-gold: #e4bc4b; --course-muted: #627285; --course-line: #dce5e9; color: var(--course-ink); overflow-x: clip; }
+.hero { overflow: hidden; background: radial-gradient(circle at 82% 12%, #174337 0%, transparent 36%), #0b1f33; color: white; padding: clamp(38px, 5vw, 76px) 0; }
+.heroGrid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(310px, .92fr); align-items: center; gap: clamp(28px, 5vw, 68px); }
 .heroCopy { max-width: 680px; }
 .heroAside { position: sticky; top: 84px; display: grid; align-self: start; gap: 14px; }
 .heroEyebrow, .kicker { margin: 0; color: #17805a; font-size: 12px; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
 .heroEyebrow { display: flex; align-items: center; gap: 9px; color: #8fe0b5; }
 .heroEyebrow span { width: 8px; height: 8px; border-radius: 50%; background: #60d895; box-shadow: 0 0 0 4px rgba(96, 216, 149, .12); }
-.hero h1 { max-width: 700px; margin: 15px 0 0; color: #fff; font-size: clamp(38px, 4.1vw, 54px); font-weight: 850; letter-spacing: 0; line-height: 1.08; }
+.hero h1 { max-width: 700px; margin: 15px 0 0; color: #fff; font-size: clamp(38px, 4.1vw, 62px); font-weight: 850; letter-spacing: -.035em; line-height: 1.07; text-wrap: balance; }
 .heroLead { max-width: 610px; margin: 11px 0 0; color: #c4d2dd; font-size: 16px; line-height: 1.55; }
 .trustPoints { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
 .trustPoints li { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; border: 1px solid rgba(204, 229, 221, .22); border-radius: 6px; background: rgba(255, 255, 255, .055); padding: 7px 9px; color: #e2eee9; font-size: 11px; font-weight: 700; }
 .trustPoints svg { color: #6ee0a3; }
 .heroPrice { width: 100%; max-width: 450px; margin-top: 0; }
-.priceBlock { border: 1px solid rgba(218, 233, 227, .24); border-radius: 9px; background: #102a40; padding: 17px; }
+.priceBlock { border: 1px solid rgba(218, 233, 227, .24); border-radius: 18px; background: #102a40; padding: clamp(20px, 3vw, 30px); box-shadow: 0 26px 60px rgba(0, 0, 0, .2); }
 .originalPrice { margin: 0; color: #b9c8d2; font-size: 13px; }
 .originalPrice s { margin-left: 6px; color: #d0d9de; }
-.currentPrice { margin: 2px 0 11px; color: #fff; font-size: 42px; font-weight: 850; line-height: 1.1; }
+.currentPrice { margin: 2px 0 4px; color: #fff; font-size: clamp(50px, 5vw, 66px); font-weight: 850; letter-spacing: -.04em; line-height: 1.05; }
+.priceCaption { margin: 0 0 22px; color: #c9d9dc; font-size: 14px; line-height: 1.5; }
+.priceBlock :global(.checkout-summary) { display: grid; gap: 7px; border-top: 1px solid rgba(214, 237, 226, .22); padding: 17px 0 0; color: #e5efeb; font-size: 13px; line-height: 1.5; }
+.priceBlock :global(.checkout-summary > strong) { font-size: 15px; }
+.priceBlock :global(.checkout-summary a), .priceBlock :global(.checkout-policy a), .priceBlock :global(.checkout-consent a) { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.priceBlock :global(.checkout-total) { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-top: 1px solid rgba(214, 237, 226, .22); margin-top: 7px; padding-top: 15px; }
+.priceBlock :global(.checkout-total strong) { color: #f3d17a; font-size: 20px; white-space: nowrap; }
+.priceBlock :global(.checkout-policy) { margin: 14px 0; color: #cbdbd7; font-size: 12px; line-height: 1.5; }
+.priceBlock :global(.checkout-consent) { display: flex; align-items: flex-start; gap: 10px; border: 1px solid rgba(214, 237, 226, .24); border-radius: 10px; padding: 12px; color: #f0f6f2; font-size: 12px; line-height: 1.5; }
+.priceBlock :global(.checkout-consent input) { accent-color: #e4bc4b; margin-top: 1px; }
+.priceBlock :global(.checkout-hint) { margin: 8px 0 15px; color: #c4d3cd; font-size: 11px; }
+.priceBlock :global(.btn-gold) { width: 100%; min-height: 51px; box-shadow: 0 8px 22px rgba(228, 188, 75, .2); }
+.priceBlockCompact :global(.checkout-summary) { border-color: #e4ece8; color: #243c49; }
+.priceBlockCompact :global(.checkout-total) { border-color: #e4ece8; }
+.priceBlockCompact :global(.checkout-total strong) { color: #123d2e; }
+.priceBlockCompact :global(.checkout-policy) { color: #4f6470; }
+.priceBlockCompact :global(.checkout-consent) { border-color: #d5e3db; background: #f4f8f5; color: #263d45; }
+.priceBlockCompact :global(.checkout-hint) { color: #5a6e78; }
 .secureNote { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 10px 0 0; color: #c0d0d9; font-size: 10px; line-height: 1.35; }
 .heroPrice .secureNote { white-space: normal; }
-.offerCountdown { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; color: #f3d77c; font-size: 12px; font-weight: 700; }
 .heroMedia { min-width: 0; overflow: hidden; border: 1px solid rgba(220, 239, 234, .18); border-radius: 12px; background: #081722; box-shadow: 0 24px 58px rgba(0, 0, 0, .24); }
 .chartPreview { overflow: hidden; background: linear-gradient(135deg, #0a1c29, #122b39); padding: 16px 17px 12px; }
 .chartMeta { display: flex; align-items: center; justify-content: space-between; color: #9aafbd; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
@@ -108,7 +124,7 @@
 .testimonial figcaption { display: grid; gap: 3px; margin-top: 15px; font-size: 12px; }
 .testimonial figcaption span { color: var(--course-muted); }
 .pricingSection { background: #eaf1ee; }
-.pricingLayout { display: grid; grid-template-columns: 1fr minmax(300px, 410px); align-items: center; gap: clamp(36px, 7vw, 96px); }
+.pricingLayout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); align-items: center; gap: clamp(32px, 7vw, 96px); }
 .pricingIntro h2 { max-width: 550px; }
 .pricingIntro > p:not(.kicker) { max-width: 520px; margin: 13px 0 0; color: var(--course-muted); font-size: 15px; line-height: 1.65; }
 .includedList { display: grid; gap: 13px; margin: 23px 0 0; padding: 0; list-style: none; }
@@ -118,16 +134,17 @@
 .paymentMethods span { display: inline-flex; align-items: center; gap: 6px; color: #526778; font-size: 11px; font-weight: 700; }
 .paymentMethods svg { color: var(--course-green); }
 .landmarkIcon { display: inline-grid; width: 17px; height: 17px; place-items: center; border: 1px solid #15845b; border-radius: 50%; color: #15845b; font-size: 11px; font-weight: 800; }
-.pricingCard { overflow: hidden; border: 1px solid #d7e2dc; border-radius: 10px; background: white; box-shadow: 0 14px 34px rgba(11, 42, 52, .09); }
-.pricingCardHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid #edf0ef; padding: 14px 19px; color: #213849; font-size: 13px; font-weight: 800; }
+.pricingCard { min-width: 0; overflow: hidden; border: 1px solid #c9ddd4; border-radius: 20px; background: white; box-shadow: 0 24px 65px rgba(11, 42, 52, .14); }
+.pricingCardHead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid #e5eeea; padding: 17px 25px; color: #213849; font-size: 13px; font-weight: 800; }
 .securePill { display: inline-flex; align-items: center; gap: 5px; color: #52705f; font-size: 10px; }
-.priceBlockCompact { border: 0; border-radius: 0; background: white; padding: 21px 20px 14px; }
+.priceBlockCompact { border: 0; border-radius: 0; background: white; padding: 25px; box-shadow: none; }
 .priceBlockCompact .originalPrice { color: #758494; }
 .priceBlockCompact .originalPrice s { color: #738191; }
-.priceBlockCompact .currentPrice { color: #132c3e; font-size: 43px; }
+.priceBlockCompact .currentPrice { color: #132c3e; font-size: clamp(52px, 5vw, 64px); }
+.priceBlockCompact .priceCaption { color: #536879; }
 .priceBlockCompact .secureNote { color: #637586; }
-.instantNote { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 3px 17px 0; color: #287451; font-size: 11px; font-weight: 700; }
-.paymentProviders { margin: 10px 0 16px; color: #83909d; font-size: 10px; text-align: center; }
+.instantNote { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0 20px; color: #287451; font-size: 12px; font-weight: 700; text-align: center; }
+.paymentProviders { margin: 10px 14px 20px; color: #637583; font-size: 11px; text-align: center; }
 .stepsGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 27px; }
 .stepCard { border-top: 2px solid #58a17e; background: #f3f7f5; padding: 19px; }
 .stepNumber { color: #20815a; font-size: 12px; font-weight: 900; }
@@ -157,7 +174,16 @@
 .supportCard small { overflow-wrap: anywhere; color: #637486; font-size: 10px; }
 .supportCard > svg { color: #608171; }
 .finalCta { background: radial-gradient(ellipse at 83% 10%, rgba(40, 92, 89, .52), transparent 40%), #0b2032; padding-block: 42px; color: white; }
-.finalCtaInner { display: flex; align-items: center; justify-content: space-between; gap: 30px; }
+.finalCtaInner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); align-items: center; gap: clamp(28px, 5vw, 70px); }
+.finalCtaInner :global(.checkout-summary) { display: grid; gap: 6px; border-top: 1px solid #52716d; padding-top: 14px; font-size: 13px; line-height: 1.5; }
+.finalCtaInner :global(.checkout-total) { display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid #52716d; margin-top: 8px; padding-top: 10px; }
+.finalCtaInner :global(.checkout-total strong) { color: #f3d17a; }
+.finalCtaInner :global(.checkout-policy), .finalCtaInner :global(.checkout-consent), .finalCtaInner :global(.checkout-hint) { color: #d0dcda; font-size: 12px; line-height: 1.5; }
+.finalCtaInner :global(.checkout-consent) { display: flex; gap: 10px; border: 1px solid #52716d; border-radius: 10px; padding: 12px; }
+.finalCtaInner :global(.checkout-policy) { margin: 12px 0; }
+.finalCtaInner :global(.checkout-hint) { margin: 8px 0 14px; }
+.finalCtaInner :global(a:not(.btn)) { color: inherit; text-decoration: underline; }
+.finalCtaInner :global(.btn-gold) { width: 100%; }
 .finalCta .kicker { color: #8fe0b5; }
 .finalCta h2 { max-width: 700px; color: #fff; font-size: clamp(25px, 3vw, 35px); }
 .finalCtaInner > div > p:last-child { margin: 9px 0 0; color: #c0ced8; font-size: 14px; }
@@ -214,7 +240,7 @@
 	.galleryGrid { grid-template-columns: 1fr; }
 	.galleryCard .chartPreview, .galleryImage { min-height: 185px; height: 185px; }
 	.pricingLayout { gap: 24px; }
-	.finalCtaInner { align-items: flex-start; flex-direction: column; gap: 19px; }
+	.finalCtaInner { grid-template-columns: 1fr; gap: 19px; }
 	.finalCtaInner > :global(.btn) { width: 100%; }
 	.stickyCta { display: flex; }
 	.coursePage ~ :global(.site-footer) { position: relative; z-index: 61; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
@@ -235,6 +261,8 @@
 }
 @media (max-width: 380px) {
 	.trustPoints { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%); }
+	.priceBlock, .priceBlockCompact { padding: 17px; }
+	.pricingCardHead { padding-inline: 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
 	.topicCard, .stickyCta, .accordion summary > svg, .faqItem summary > svg { transition: none; }

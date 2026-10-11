@@ -25,12 +25,13 @@ test('course facts and curriculum remain consistent', () => {
 test('checkout requires acknowledgment and uses the trusted server amount', () => {
   const button = read('components/RazorpayCheckoutButton.tsx');
   const order = read('app/api/razorpay/create-order/route.ts');
-  assert.match(button, /disabled=\{isLoading \|\| !acknowledged\}/);
+  assert.match(button, /disabled=\{isLoading \|\| paymentPending \|\| !acknowledged\}/);
   assert.match(button, /checkoutInProgress\.current/);
+  assert.match(button, /checkoutBusy/);
   assert.match(button, /\/terms/);
   assert.match(button, /\/refund-policy/);
   assert.match(button, /data\.amount !== COURSE_PRICE_PAISE/);
-  assert.match(order, /const amount = getCoursePricePaise\(\)/);
+  assert.match(order, /amount = getCoursePricePaise\(\)/);
   assert.doesNotMatch(order, /request\.json\(/);
 });
 

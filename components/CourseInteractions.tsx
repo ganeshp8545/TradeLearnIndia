@@ -1,7 +1,6 @@
 'use client';
 
 import {useEffect, useState} from 'react';
-import {CalendarDays} from 'lucide-react';
 import styles from './CourseLandingPage.module.css';
 
 export function StickyCourseCTA({label}: {label: string}) {
@@ -23,28 +22,7 @@ export function StickyCourseCTA({label}: {label: string}) {
 	}, []);
 
 	return <div className={`${styles.stickyCta} ${isVisible ? styles.stickyCtaVisible : ''}`} aria-hidden={!isVisible}>
-		<span className={styles.stickyPrice}><span>{label.replace('Enroll Now – ', '')}</span></span>
-		<a href="#enrol" className="btn btn-gold">{label}</a>
+		<span className={styles.stickyPrice}><strong>{label.replace('Enroll Now – ', '')}</strong><span>11 video lessons</span></span>
+		<a href="#enrol" tabIndex={isVisible ? 0 : -1} className="btn btn-gold">View checkout</a>
 	</div>;
-}
-
-export function OfferCountdown({endDate}: {endDate: string}) {
-	const [remaining, setRemaining] = useState('');
-
-	useEffect(() => {
-		const deadline = new Date(endDate).getTime();
-		if (!Number.isFinite(deadline)) return;
-		const update = () => {
-			const milliseconds = Math.max(0, deadline - Date.now());
-			const days = Math.floor(milliseconds / 86_400_000);
-			const hours = Math.floor((milliseconds % 86_400_000) / 3_600_000);
-			const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
-			setRemaining(milliseconds === 0 ? 'Offer period has ended' : `${days}d ${hours}h ${minutes}m remaining`);
-		};
-		update();
-		const interval = window.setInterval(update, 60_000);
-		return () => window.clearInterval(interval);
-	}, [endDate]);
-
-	return <p className={styles.offerCountdown}><CalendarDays size={15} aria-hidden="true"/><span aria-live="polite">{remaining || `Offer ends ${new Date(endDate).toLocaleDateString('en-IN')}`}</span></p>;
 }

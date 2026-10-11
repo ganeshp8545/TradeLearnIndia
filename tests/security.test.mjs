@@ -27,11 +27,18 @@ function fixture(options = {}) {
     state.calls.push(String(url));
     const data = init.body ? JSON.parse(init.body) : {};
     const json = value => ({ok: true, status: 200, json: async () => value});
+    if (url === 'https://api.razorpay.com/v1/orders' && init.method === 'POST') {
+      state.orderPayload = data;
+      if (options.providerFailure) return {ok: false, status: 503};
+      return json({id: 'order_test', amount: data.amount, currency: data.currency});
+    }
     if (url === 'https://api.razorpay.com/v1/orders/order_test') return json({id: 'order_test', amount: options.orderAmount ?? 49900, currency: 'INR', receipt: 'course_test', notes: {course: 'share-market-complete-course'}, ...options.order});
     if (url === 'https://api.razorpay.com/v1/payments/pay_test') return json({id: 'pay_test', order_id: 'order_test', amount: 49900, currency: 'INR', status: 'captured', email: 'buyer@example.test', ...options.payment});
     if (url === 'https://api.resend.com/emails') { state.sent.push(data); return {ok: !options.emailFailure, status: options.emailFailure ? 503 : 200}; }
     if (!String(url).startsWith('https://db.invalid/rest/v1/')) throw new Error(`Unexpected network call: ${url}`);
     if (String(url).includes('/rpc/record_course_payment_v2')) {
+      if (options.databaseFailure) return {ok: false, status: 503};
+      if (options.emptyDatabaseRecord) return json([]);
       state.writes++;
       if (data.p_capture_verified && !state.row.capture_verified_at) {
         state.grants++; Object.assign(state.row, {payment_status: 'success', course_access_granted: true, capture_verified_at: new Date().toISOString(), razorpay_payment_id: data.p_payment_id});
@@ -215,6 +222,35 @@ test('ordinary payment-record API cannot write success without reconciliation', 
   const {api, state} = fixture();
   await assert.rejects(api.recordCoursePayment({orderId: 'order_test', paymentId: 'pay_test', name: null, email: null, amount: 49900, currency: 'INR', status: 'success'}), /Capture verification required/);
   assert.equal(state.writes, 0);
+});
+
+test('create-order uses the shared INR 499 price and persists before responding', async () => {
+  const {load, state} = fixture();
+  const response = await load('app/api/razorpay/create-order/route').POST(new globalThis.Request('https://site.invalid/api/razorpay/create-order', {
+    method: 'POST', headers: {origin: 'https://site.invalid', 'Content-Type': 'application/json'},
+    body: JSON.stringify({amount: 100, currency: 'USD'})}));
+  assert.equal(response.status, 200);
+  assert.equal(state.orderPayload.amount, 49900);
+  assert.equal(state.orderPayload.currency, 'INR');
+  assert.equal(state.writes, 1);
+  assert.equal((await response.json()).amount, 49900);
+});
+test('create-order reports missing configuration without calling providers', async () => {
+  const {load, state, env} = fixture(); delete env.COURSE_ACCESS_SECRET;
+  const response = await load('app/api/razorpay/create-order/route').POST(new globalThis.Request('https://site.invalid', {
+    method: 'POST', headers: {origin: 'https://site.invalid'}}));
+  assert.equal(response.status, 503); assert.equal(state.calls.length, 0);
+  assert.ok((await response.json()).requestId);
+});
+test('create-order distinguishes Razorpay failure from database failure', async () => {
+  for (const [option, status, writes] of [['providerFailure', 502, 0], ['databaseFailure', 503, 0], ['emptyDatabaseRecord', 503, 0]]) {
+    const {load, state} = fixture({[option]: true});
+    const response = await load('app/api/razorpay/create-order/route').POST(new globalThis.Request('https://site.invalid', {
+      method: 'POST', headers: {origin: 'https://site.invalid'}}));
+    assert.equal(response.status, status);
+    assert.equal(state.writes, writes);
+    assert.ok((await response.json()).requestId);
+  }
 });
 
 test('signed events explicitly belonging to another course are acknowledged without mutation', async () => {

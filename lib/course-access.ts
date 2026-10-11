@@ -1,9 +1,9 @@
 import 'server-only';
 import {createHash, createHmac, randomBytes} from 'node:crypto';
-import {COURSE_NAME, LEGACY_COURSE_NAME, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR} from '@/lib/course-pricing';
+import {COURSE_NAME, LEGACY_COURSE_NAME, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_SLUG, formatINR} from '@/lib/course-pricing';
 import {verifyRazorpayOrderSignature} from '@/lib/razorpay-webhook';
 
-export {COURSE_NAME, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_SLUG, TEST_COURSE_PRICE_INR, formatINR};
+export {COURSE_NAME, COURSE_PRICE_INR, COURSE_PRICE_PAISE, COURSE_SLUG, formatINR};
 
 export function getCourseDriveUrl(): URL {
 	const configuredUrl = process.env.COURSE_DRIVE_URL;
@@ -27,7 +27,7 @@ export function getCoursePricePaise(): number {
 		throw new Error('COURSE_TEST_MODE does not match the Razorpay key mode');
 	}
 
-	return (testMode === 'true' ? TEST_COURSE_PRICE_INR : COURSE_PRICE_INR) * 100;
+	return COURSE_PRICE_PAISE;
 }
 
 export type PaymentStatus = 'pending' | 'success' | 'failed';
@@ -180,7 +180,11 @@ async function persistPayment(payment: PaymentInput, captured: boolean, timing?:
 // Success writes are private to reconciliation with the authenticated provider API.
 export async function recordCoursePayment(payment: Omit<PaymentInput, 'status'> & {status: 'pending' | 'failed'}): Promise<void> {
     if (payment.status !== 'pending' && payment.status !== 'failed') throw new Error('Capture verification required');
-    await persistPayment(payment, false);
+    const recorded = await persistPayment(payment, false);
+    if (!recorded || recorded.razorpay_order_id !== payment.orderId
+        || recorded.amount !== payment.amount || recorded.currency !== payment.currency) {
+        throw new Error('Payment record was not confirmed');
+    }
 }
 
 export async function getPaymentByOrderId(orderId: string, timing?: CourseAccessTimingObserver): Promise<CoursePayment | null> {
